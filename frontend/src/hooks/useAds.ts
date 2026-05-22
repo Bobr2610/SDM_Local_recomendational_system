@@ -1,30 +1,47 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { Ad, AdPosition } from '../types'
-import adsConfig from '../data/ads.json'
+import type { AdPosition } from '../types'
+import { getHomeAdProducts } from '../data/productParser'
+import type { AdProduct } from '../data/productParser'
+
+function toAd(p: AdProduct, position: AdPosition) {
+  return {
+    id: p.id,
+    title: p.name,
+    subtitle: p.description.slice(0, 80) + '...',
+    image: p.image,
+    link: `/product/${p.id}`,
+    position,
+    priority: 0,
+    active: true,
+    color: p.color,
+  }
+}
+
+const REFRESH_MS = 30000
+const MAX_PER_POSITION = 3
 
 export function useAds(position: AdPosition) {
-  const [ads, setAds] = useState<Ad[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [ads, setAds] = useState<ReturnType<typeof toAd>[]>([])
 
   const loadAds = useCallback(() => {
-    const config = adsConfig as { ads: Ad[]; maxAdsPerPosition: number; refreshIntervalMs: number }
-    const filtered = config.ads
-      .filter((ad) => ad.active && ad.position === position)
-      .sort((a, b) => a.priority - b.priority)
-      .slice(0, config.maxAdsPerPosition)
-    setAds(filtered)
+    const products = getHomeAdProducts()
+    const mapped = products
+      .map((p) => toAd(p, position))
+      .slice(0, MAX_PER_POSITION)
+    setAds(mapped)
   }, [position])
 
   useEffect(() => {
     loadAds()
   }, [loadAds])
 
+  const [currentIndex, setCurrentIndex] = useState(0)
+
   useEffect(() => {
     if (ads.length <= 1) return
-    const config = adsConfig as { refreshIntervalMs: number }
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % ads.length)
-    }, config.refreshIntervalMs)
+    }, REFRESH_MS)
     return () => clearInterval(timer)
   }, [ads.length])
 

@@ -1,18 +1,12 @@
 import type { ApiRequestConfig, ApiResponse } from '../../types'
-
-import allProducts from '../../data/products.json'
+import { getAllProducts } from '../../data/productParser'
 
 export const productsMock: Record<string, (config: ApiRequestConfig) => ApiResponse<unknown>> = {
   'GET:/products': () => {
-    const all = Object.values(allProducts).flatMap((group) =>
-      (group as { products: unknown[] }).products
-    )
-    return { data: all, status: 200 }
+    return { data: getAllProducts(), status: 200 }
   },
   'GET:/products/recommendations': () => {
-    const all = Object.values(allProducts).flatMap((group) =>
-      (group as { products: unknown[] }).products
-    )
+    const all = getAllProducts()
     const random = [...all].sort(() => Math.random() - 0.5).slice(0, 5)
     return { data: random, status: 200 }
   },

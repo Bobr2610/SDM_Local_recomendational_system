@@ -8,12 +8,12 @@ export interface BankProduct {
 }
 
 export type ProductCategory =
-  | 'deposits_individuals'
+  | 'deposits_and_savings_accounts_individuals'
   | 'loans_individuals'
   | 'debit_cards'
-  | 'rko_business'
+  | 'rko_business_packages'
   | 'deposits_business'
-  | 'business_services'
+  | 'additional_business_services'
 
 export interface ProductCategoryGroup {
   category: ProductCategory

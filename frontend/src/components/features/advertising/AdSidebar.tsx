@@ -8,11 +8,11 @@ export function AdSidebar() {
   if (!FEATURES.ADS || !currentAd) return null
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-4 sm:mb-6">
       <CardBody>
         <a href={currentAd.link || '#'} className="block group">
-          <div className="w-full h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 mb-3" />
-          <h4 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+          <div className="w-full h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 mb-2 sm:mb-3" />
+          <h4 className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
             {currentAd.title}
           </h4>
           <p className="text-xs text-gray-500 mt-1">{currentAd.subtitle}</p>

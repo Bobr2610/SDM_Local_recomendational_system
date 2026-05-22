@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { BankProduct, ProductCategoryGroup, ProductCategory, Recommendation } from '../types'
-import allProductsData from '../data/products.json'
+import { getAllProducts, getCategories, getProductsByCategory } from '../data/productParser'
 
 interface ProductsState {
   categories: ProductCategoryGroup[]
@@ -15,30 +15,9 @@ interface ProductsState {
   fetchRecommendations: () => Promise<void>
 }
 
-interface RawGroup {
-  title: string
-  icon: string
-  products: Array<{ id: string; name: string; description: string }>
-}
-
-function buildCategories(): ProductCategoryGroup[] {
-  return Object.entries(allProductsData).map(([key, value]) => {
-    const group = value as RawGroup
-    return {
-      category: key as ProductCategory,
-      title: group.title,
-      icon: group.icon,
-      products: group.products.map((p) => ({
-        ...p,
-        category: key as ProductCategory,
-      })),
-    }
-  })
-}
-
 export const useProductsStore = create<ProductsState>((set, get) => ({
-  categories: buildCategories(),
-  allProducts: buildCategories().flatMap((c) => c.products),
+  categories: getCategories(),
+  allProducts: getAllProducts(),
   selectedCategory: null,
   recommendations: [],
   isLoading: false,
@@ -47,10 +26,9 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   setCategory: (category) => set({ selectedCategory: category }),
 
   getFilteredProducts: () => {
-    const { categories, selectedCategory } = get()
-    if (!selectedCategory) return categories.flatMap((c) => c.products)
-    const found = categories.find((c) => c.category === selectedCategory)
-    return found?.products ?? []
+    const { selectedCategory } = get()
+    if (!selectedCategory) return getAllProducts()
+    return getProductsByCategory(selectedCategory)
   },
 
   setRecommendations: (recs) => set({ recommendations: recs }),
