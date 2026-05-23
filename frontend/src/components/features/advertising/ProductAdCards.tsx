@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom'
 import { getHomeAdProducts } from '../../../data/productParser'
+import { useUserInputStore } from '../../../store'
 import type { AdProduct } from '../../../data/productParser'
 
 function AdCard({ ad }: { ad: AdProduct }) {
+  const trackClick = useUserInputStore((s) => s.trackClick)
+
   return (
     <Link
       to={`/product/${ad.id}`}
+      onClick={() => trackClick(ad.id)}
       className="block rounded-xl overflow-hidden group relative min-h-[140px] sm:min-h-[160px]"
     >
       <div className={`absolute inset-0 bg-gradient-to-br ${ad.color}`} />

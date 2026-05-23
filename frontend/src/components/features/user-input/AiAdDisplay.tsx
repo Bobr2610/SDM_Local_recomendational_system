@@ -1,5 +1,6 @@
 import { useAdSelection } from '../../../hooks/useAdSelection'
 import { useAnalytics } from '../../../hooks/useAnalytics'
+import { useUserInputStore } from '../../../store'
 import { Badge } from '../../ui'
 import { FEATURES } from '../../../config/features'
 
@@ -15,6 +16,7 @@ const DEFAULT_AD = {
 export function AiAdDisplay() {
   const { selectedAd, isLoading } = useAdSelection()
   const { track } = useAnalytics()
+  const trackClick = useUserInputStore((s) => s.trackClick)
 
   if (!FEATURES.AI_ADS) return null
 
@@ -36,7 +38,7 @@ export function AiAdDisplay() {
     <a
       href={ad.link || '#'}
       className="block w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 mb-4 sm:mb-6 group"
-      onClick={() => track('ad_click', { adId: ad.adId })}
+      onClick={() => { track('ad_click', { adId: ad.adId }); trackClick(ad.adId) }}
     >
       <div className="px-4 sm:px-8 py-6 sm:py-10 md:py-14 relative">
         <div className="sm:absolute top-3 sm:top-4 right-3 sm:right-4 mb-2 sm:mb-0">

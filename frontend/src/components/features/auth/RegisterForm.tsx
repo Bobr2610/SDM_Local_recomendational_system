@@ -10,8 +10,11 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    clearError()
     await register(form)
-    navigate('/dashboard')
+    if (localStorage.getItem('sdm_auth_token')) {
+      navigate('/dashboard')
+    }
   }
 
   return (
@@ -20,7 +23,7 @@ export function RegisterForm() {
         label="ФИО"
         placeholder="Иванов Иван Иванович"
         value={form.fullName}
-        onChange={(e) => { setForm({ ...form, fullName: e.target.value }); clearError() }}
+        onChange={(e) => setForm({ ...form, fullName: e.target.value })}
         required
       />
       <Input
@@ -28,7 +31,7 @@ export function RegisterForm() {
         type="tel"
         placeholder="+7 (999) 123-45-67"
         value={form.phone}
-        onChange={(e) => { setForm({ ...form, phone: e.target.value }); clearError() }}
+        onChange={(e) => setForm({ ...form, phone: e.target.value })}
         required
       />
       <Input
@@ -36,7 +39,7 @@ export function RegisterForm() {
         type="email"
         placeholder="ivan@example.com"
         value={form.email}
-        onChange={(e) => { setForm({ ...form, email: e.target.value }); clearError() }}
+        onChange={(e) => setForm({ ...form, email: e.target.value })}
         required
       />
       <Input
@@ -44,7 +47,7 @@ export function RegisterForm() {
         type="password"
         placeholder="Минимум 8 символов"
         value={form.password}
-        onChange={(e) => { setForm({ ...form, password: e.target.value }); clearError() }}
+        onChange={(e) => setForm({ ...form, password: e.target.value })}
         required
         minLength={8}
       />
