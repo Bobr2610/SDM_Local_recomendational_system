@@ -1,0 +1,7 @@
+backend/datasets/raw/test_ver2.csv
+backend/datasets/raw/train_ver2.csv
+backend/datasets/raw/
+__pycache__/
+*.pyc
+.venv/
+node_modules/

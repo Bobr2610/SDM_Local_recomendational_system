@@ -2,6 +2,7 @@ export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
   TIMEOUT: 10000,
   USE_MOCK: import.meta.env.VITE_USE_MOCK === 'true' || true,
+  USE_LOCAL_MODEL: import.meta.env.VITE_USE_LOCAL_MODEL !== 'false',
   RETRY_COUNT: 3,
 }
 

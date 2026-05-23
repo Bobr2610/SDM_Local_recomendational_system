@@ -1,13 +1,20 @@
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Button } from '../components/ui'
 import { UserInputForm, AiAdDisplay, ProfileCard } from '../components/features/user-input'
 import { ProductAdCards } from '../components/features/advertising'
-import { useProductsStore } from '../store'
+import { useProductsStore, useUserInputStore } from '../store'
 import { useAnalytics } from '../hooks/useAnalytics'
 
 export function HomePage() {
   const { categories } = useProductsStore()
   const { track } = useAnalytics()
+  const fetchAd = useUserInputStore((s) => s.fetchAd)
+  const trackClick = useUserInputStore((s) => s.trackClick)
+
+  useEffect(() => {
+    fetchAd()
+  }, [])
 
   return (
     <div>
@@ -36,7 +43,11 @@ export function HomePage() {
 
           <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-6">
             {categories.map((cat) => (
-              <Link key={cat.category} to={`/products?category=${cat.category}`} onClick={() => track('navigation', { to: cat.category })}>
+              <Link key={cat.category}                 to={`/products?category=${cat.category}`}
+                onClick={() => {
+                  track('navigation', { to: cat.category })
+                  trackClick(cat.products[0]?.id ?? cat.category)
+                }}>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md hover:border-gray-300 transition-all">
                   <span className="text-2xl sm:text-3xl">{cat.icon}</span>
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 mt-2 sm:mt-3">{cat.title}</h3>
