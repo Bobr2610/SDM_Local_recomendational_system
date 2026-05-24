@@ -49,8 +49,8 @@ export function ProductDetailPage() {
       </Card>
 
       <div className="mt-4 sm:mt-6 text-center">
-        <Link to="/register">
-          <Button variant="primary" size="lg">Оформить</Button>
+        <Link to="/">
+          <Button variant="primary" size="lg">На главную</Button>
         </Link>
       </div>
     </div>
