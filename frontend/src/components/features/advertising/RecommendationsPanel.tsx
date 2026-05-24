@@ -8,6 +8,7 @@ import {
   getTopK,
 } from '../../../services/modelInference'
 import { getAllProducts, getHomeAdProducts } from '../../../data/productParser'
+import { colors } from '../../../config/theme'
 import type { ProfileData } from './ClientSelector'
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -36,55 +37,40 @@ function getCategoryTag(cat: string): string {
   return CATEGORY_TAGS[cat] ?? cat
 }
 
-interface TopRecCardProps {
-  product: AdProduct
-  rank: number
-}
+function RecCard({ product, rank, hero }: { product: AdProduct; rank: number; hero?: boolean }) {
+  const s = colors.rank[rank - 1] ?? colors.rank[0]
 
-function TopRecCard({ product, rank }: TopRecCardProps) {
   return (
     <Link
       to={`/product/${product.id}`}
-      className="block relative rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 overflow-hidden group"
-      style={{ minHeight: '180px' }}
+      className="block rounded-2xl overflow-hidden hover:-translate-y-0.5 transition-all duration-200"
+      style={{
+        minHeight: hero ? '170px' : '180px',
+        background: `linear-gradient(135deg, ${s.from} 0%, ${s.to} 100%)`,
+        boxShadow: `0 ${hero ? 10 : 6}px ${hero ? 30 : 20}px ${s.shadow}`,
+      }}
     >
-      <div className="p-7 h-full flex flex-col justify-between relative z-10">
+      <div className="p-5 h-full flex flex-col gap-2 relative z-10">
         <div className="flex items-start justify-between">
-          <div className="inline-flex items-center gap-1.5 bg-white/15 text-white text-xs font-medium px-2.5 py-1 rounded-full">
-            <span>{rank}</span>
-            <span>Рекомендуем</span>
+          <div
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-bold"
+            style={{ background: 'rgba(255,255,255,0.2)' }}
+          >
+            {rank}
           </div>
-          <div className="bg-white/15 text-white text-xs px-2.5 py-1 rounded-full">
+          <div
+            className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+            style={{ background: 'rgba(255,255,255,0.2)', color: colors.text.white }}
+          >
             {getCategoryTag(product.category)}
           </div>
         </div>
-        <div className="mt-auto">
-          <div className="text-3xl mb-2">{getCategoryIcon(product.category)}</div>
-          <h3 className="text-xl font-bold text-white mb-1">{product.name}</h3>
-          <p className="text-sm text-white/80 leading-relaxed line-clamp-2">{product.description}</p>
+        <div>
+          <div className="text-2xl mb-1.5 leading-none">{getCategoryIcon(product.category)}</div>
+          <h3 className="text-base font-bold text-white mb-0.5 leading-tight">{product.name}</h3>
+          <p className="text-xs leading-relaxed line-clamp-2" style={{ color: 'rgba(255,255,255,0.75)' }}>{product.description}</p>
         </div>
       </div>
-    </Link>
-  )
-}
-
-interface RecCardProps {
-  product: AdProduct
-  rank: number
-}
-
-function RecCard({ product, rank }: RecCardProps) {
-  return (
-    <Link
-      to={`/product/${product.id}`}
-      className="block bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all"
-    >
-      <div className="flex items-start gap-1 text-xs font-semibold text-gray-400 mb-2">
-        <span>{rank}</span>
-      </div>
-      <div className="text-2xl mb-2">{getCategoryIcon(product.category)}</div>
-      <h4 className="font-semibold text-gray-900 text-base leading-tight mb-1">{product.name}</h4>
-      <p className="text-sm text-gray-500 leading-snug line-clamp-2">{product.description}</p>
     </Link>
   )
 }
@@ -122,22 +108,35 @@ function ModeSwitch({
   mode: 'profile' | 'popular'
   onChange: (m: 'profile' | 'popular') => void
 }) {
-  const btn = (value: 'profile' | 'popular', label: string) => (
-    <button
-      onClick={() => onChange(value)}
-      className={`px-4 py-1.5 text-sm font-medium rounded-xl transition-all cursor-pointer ${
-        mode === value ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-      }`}
-    >
-      {label}
-    </button>
-  )
   return (
-    <div className="flex items-center justify-between mb-6">
-      <h3 className="text-lg font-semibold text-gray-900">Режим рекомендаций</h3>
-      <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
-        {btn('profile', 'По профилю')}
-        {btn('popular', 'Популярные')}
+    <div className="flex items-center justify-between mb-5">
+      <h3 className="text-lg font-semibold" style={{ color: colors.text.primary }}>Режим рекомендаций</h3>
+      <div
+        className="flex rounded-[14px] p-[4px] gap-0"
+        style={{ background: colors.segmented.bg }}
+      >
+        <button
+          onClick={() => onChange('profile')}
+          className="px-4 py-1.5 text-sm font-medium rounded-xl transition-all cursor-pointer"
+          style={
+            mode === 'profile'
+              ? { background: colors.surface, color: colors.text.primary, boxShadow: `0 2px 8px ${colors.segmented.activeShadow}` }
+              : { color: colors.text.secondary }
+          }
+        >
+          По профилю
+        </button>
+        <button
+          onClick={() => onChange('popular')}
+          className="px-4 py-1.5 text-sm font-medium rounded-xl transition-all cursor-pointer"
+          style={
+            mode === 'popular'
+              ? { background: colors.surface, color: colors.text.primary, boxShadow: `0 2px 8px ${colors.segmented.activeShadow}` }
+              : { color: colors.text.secondary }
+          }
+        >
+          Популярные
+        </button>
       </div>
     </div>
   )
@@ -148,14 +147,17 @@ export function RecommendationsPanel({ profile }: { profile: ProfileData | null 
   const products = useRecommendations(profile, mode)
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6">
+    <div
+      className="bg-white rounded-2xl p-6"
+      style={{ border: `1px solid ${colors.border}`, boxShadow: colors.shadow.card }}
+    >
       <ModeSwitch mode={mode} onChange={setMode} />
 
-      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Топ-5 рекомендаций</h4>
+      <h4 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: colors.text.secondary }}>Топ-5 рекомендаций</h4>
 
       {products.length > 0 && (
-        <div className="mb-4">
-          <TopRecCard product={products[0]} rank={1} />
+        <div className="mb-3.5">
+          <RecCard product={products[0]} rank={1} hero />
         </div>
       )}
 
