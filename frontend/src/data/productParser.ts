@@ -4,7 +4,6 @@ import type { BankProduct, ProductCategoryGroup, ProductCategory } from '../type
 export type AdProduct = BankProduct & {
   image: string
   showOnHome: boolean
-  color: string
 }
 
 interface RawItem {
@@ -13,7 +12,17 @@ interface RawItem {
   description: string
   image: string
   showOnHome: boolean
-  color: string
+}
+
+function parseProduct(raw: RawItem, category: string): AdProduct {
+  return {
+    id: raw.id,
+    name: raw.name,
+    description: raw.description,
+    category: category as ProductCategory,
+    image: raw.image,
+    showOnHome: raw.showOnHome,
+  }
 }
 
 const CATEGORY_META: Record<string, { title: string; icon: string }> = {
@@ -26,20 +35,6 @@ const CATEGORY_META: Record<string, { title: string; icon: string }> = {
 }
 
 const data = rawData as Record<string, RawItem[]>
-
-// ─── парсер JSON → продукт ───
-
-function parseProduct(raw: RawItem, category: string): AdProduct {
-  return {
-    id: raw.id,
-    name: raw.name,
-    description: raw.description,
-    category: category as ProductCategory,
-    image: raw.image,
-    showOnHome: raw.showOnHome,
-    color: raw.color,
-  }
-}
 
 // ─── API ───
 

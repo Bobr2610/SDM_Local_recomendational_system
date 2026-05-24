@@ -12,7 +12,7 @@ function AdCard({ ad }: { ad: AdProduct }) {
       onClick={() => trackClick(ad.id)}
       className="block rounded-xl overflow-hidden group relative min-h-[140px] sm:min-h-[160px]"
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${ad.color}`} />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800" />
       <img
         src={ad.image}
         alt={ad.name}

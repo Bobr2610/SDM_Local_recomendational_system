@@ -13,7 +13,7 @@ function toAd(p: AdProduct, position: AdPosition) {
     position,
     priority: 0,
     active: true,
-    color: p.color,
+    color: '#2563EB',
   }
 }
 

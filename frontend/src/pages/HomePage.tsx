@@ -3,6 +3,7 @@ import { Header } from '../components/layout'
 import { ClientSelector, PROFILES } from '../components/features/advertising/ClientSelector'
 import { ClientProfile } from '../components/features/advertising/ClientProfile'
 import { RecommendationsPanel } from '../components/features/advertising/RecommendationsPanel'
+import { colors } from '../config/theme'
 import { useUserInputStore } from '../store'
 
 export function HomePage() {
@@ -23,17 +24,15 @@ export function HomePage() {
   const profile = PROFILES[selectedIdx]
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+    <div className="min-h-screen flex flex-col" style={{ background: colors.bg }}>
       <Header />
-      <main className="flex-1 px-8 py-8 max-w-7xl mx-auto w-full">
-        <h1 className="text-4xl font-bold text-gray-900 mb-6">Подберите продукты для клиента</h1>
-
-        <div className="mb-6">
+      <main className="flex-1 px-6 py-6 max-w-[1440px] mx-auto w-full">
+        <div className="mb-5">
           <ClientSelector selectedIdx={selectedIdx} onSelect={handleSelect} />
         </div>
 
         <div className="flex gap-6">
-          <div className="w-[32%] shrink-0">
+          <div className="w-[420px] shrink-0">
             <ClientProfile profile={profile} />
           </div>
           <div className="flex-1 min-w-0">
