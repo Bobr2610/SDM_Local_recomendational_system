@@ -1,22 +1,22 @@
 {
-  "model": "BitNet b1.58",
+  "model": "BitNet b1.58 (Microsoft FAQ + bitnet.cpp)",
   "dataset": "train_wide.csv",
-  "sample_frac": 0.1,
-  "epochs": 15,
-  "train_samples": 30091,
-  "val_samples": 7523,
-  "train_loss": null,
-  "val_loss": 0.1408,
+  "sample_frac": 0.05,
+  "epochs": 3,
+  "train_samples": 15045,
+  "val_samples": 3762,
+  "train_loss": 0.2373,
+  "val_loss": 0.229,
   "loss": "focal + lambda@5",
   "metrics": {
-    "precision@5": 0.2705,
-    "ndcg@5": 0.7402,
-    "business_value@5": 3.237
+    "precision@5": 0.2996,
+    "ndcg@5": 0.787,
+    "business_value@5": 3.6032
   },
   "inference": {
-    "temperature": 0.45,
-    "min_score": 0.6145,
-    "min_margin": 0.4503
+    "temperature": 0.55,
+    "min_score": 0.537,
+    "min_margin": 0.1443
   },
-  "updated_at": "2026-05-25T19:59:21.377603+00:00"
+  "updated_at": "2026-05-25T20:18:35.383359+00:00"
 }

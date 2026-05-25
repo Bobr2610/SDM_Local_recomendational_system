@@ -13,8 +13,6 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(BACKEND))
 
 from src.evaluation.metrics import evaluate_all
+from src.models.bitnet import SimpleBitNet, export_frontend_weights
 from src.training.losses import combined_recommendation_loss
 from src.training.calibration import fit_temperature
 
@@ -121,53 +120,12 @@ else:
     product_cols = [f"prod-{i}" for i in range(22)]
 
 # ═══════════════════════════════════════
-# 2. BitNet b1.58 модель
+# 2. BitNet b1.58 (Microsoft FAQ quantizers, src.models.bitnet)
 # ═══════════════════════════════════════
 
-print("\n=== Training BitNet b1.58 ===")
+print("\n=== Training BitNet b1.58 (SimpleBitNet) ===")
 
-class RMSNorm(nn.Module):
-    def __init__(self, dim, eps=1e-6):
-        super().__init__()
-        self.eps = eps
-        self.w = nn.Parameter(torch.ones(dim))
-    def forward(self, x):
-        return x / (x.pow(2).mean(-1, keepdim=True) + self.eps).sqrt() * self.w
-
-class BitLinear(nn.Module):
-    def __init__(self, d_in, d_out):
-        super().__init__()
-        self.norm = RMSNorm(d_in)
-        self.weight = nn.Parameter(torch.zeros(d_out, d_in))
-        nn.init.trunc_normal_(self.weight, std=0.02)
-        self.bias = nn.Parameter(torch.zeros(d_out))
-    def forward(self, x):
-        x = self.norm(x)
-        s = x.abs().max(-1, keepdim=True).values.clamp(1e-8) / 127
-        xq = torch.clamp(torch.round(x / s), -127, 127) * s
-        xq = xq.detach() + x - x.detach()
-        g = self.weight.abs().mean()
-        w = torch.clamp(torch.round(self.weight / (g+1e-8)), -1, 1) * g
-        w = w.detach() + self.weight - self.weight.detach()
-        return F.linear(xq, w, self.bias)
-
-class BitNet(nn.Module):
-    def __init__(self, d_in=32, d_out=36, d_h=128, n_layers=3):
-        super().__init__()
-        self.embed = nn.Linear(d_in, d_h, bias=False)
-        self.blocks = nn.ModuleList([
-            nn.Sequential(BitLinear(d_h, d_h), nn.Dropout(0.1)) for _ in range(n_layers)
-        ])
-        self.norm = RMSNorm(d_h)
-        self.head = nn.Linear(d_h, d_out)
-
-    def forward(self, x):
-        x = self.embed(x)
-        for b in self.blocks:
-            x = F.silu(b[0](x)) + x
-        return self.head(self.norm(x))
-
-device = 'cpu'
+device = "cpu"
 X_tr, X_val, y_tr, y_val = train_test_split(
     X, y, test_size=0.2, random_state=42, shuffle=True
 )
@@ -176,7 +134,7 @@ y_tr = torch.from_numpy(y_tr).to(device)
 X_val = torch.from_numpy(X_val).to(device)
 y_val = torch.from_numpy(y_val).to(device)
 
-model = BitNet(d_in=32, d_out=36, d_h=128, n_layers=3).to(device)
+model = SimpleBitNet(d_in=32, d_out=36, d_h=128, n_layers=3, dropout=0.1).to(device)
 opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
 final_train_loss = 0.0
@@ -223,44 +181,42 @@ for epoch in range(EPOCHS):
 
 print("\n=== Exporting model weights for frontend ===")
 
-weights = {}
-model.eval()
-for name, param in model.named_parameters():
-    if 'weight' in name and param.dim() >= 2:
-        p = param.detach()
-        g = float(p.abs().mean())
-        w = torch.clamp(torch.round(p / (g+1e-8)), -1, 1).cpu().numpy()
-        weights[name] = {'data': w.tolist(), 'gamma': g, 'shape': list(w.shape)}
-    else:
-        weights[name] = {'data': param.detach().cpu().numpy().tolist(), 'shape': list(param.detach().shape)}
-
 export_dir = ROOT / "frontend" / "public" / "model"
-export_dir.mkdir(parents=True, exist_ok=True)
+export_frontend_weights(
+    model,
+    export_dir,
+    feature_names=[
+        "age",
+        "seniority_months",
+        "income",
+        "is_new_customer",
+        "sex_enc",
+        "segment_INDIVIDUALS",
+        "segment_VIP",
+        "segment_STUDENTS",
+    ],
+    product_names=product_cols[:36],
+    norm_mean=save_mean,
+    norm_std=save_std,
+)
 
-with open(export_dir / "bitnet_weights.json", 'w') as f:
-    json.dump(weights, f)
-print(f"  Weights saved: {export_dir / 'bitnet_weights.json'}")
-
-# Normalization params for frontend
 norm_data = {
     "mean": save_mean,
     "std": save_std,
-    "feature_names": ["age", "balance", "monthlyIncome", "accountType", "currency", "seniority_months", "segment_vip", "segment_students"],
+    "feature_names": [
+        "age",
+        "balance",
+        "monthlyIncome",
+        "accountType",
+        "currency",
+        "seniority_months",
+        "segment_vip",
+        "segment_students",
+    ],
 }
-with open(export_dir / "normalization.json", 'w') as f:
+with open(export_dir / "normalization.json", "w", encoding="utf-8") as f:
     json.dump(norm_data, f)
 print(f"  Norms saved:   {export_dir / 'normalization.json'}")
-
-feature_order = {
-    "input_features": [
-        "age", "seniority_months", "income", "is_new_customer",
-        "sex_enc", "segment_INDIVIDUALS", "segment_VIP", "segment_STUDENTS",
-    ],
-    "product_names": product_cols[:36],
-}
-with open(export_dir / "feature_order.json", 'w') as f:
-    json.dump(feature_order, f, indent=2)
-print(f"  Features saved: {export_dir / 'feature_order.json'}")
 
 # ═══════════════════════════════════════
 # 3b. Метрики качества на validation
@@ -289,7 +245,7 @@ min_score = float(np.percentile(top1, 25))
 min_margin = float(max(0.03, np.percentile(margins, 25)))
 
 metrics_export = {
-    "model": "BitNet b1.58",
+    "model": "BitNet b1.58 (Microsoft FAQ + bitnet.cpp)",
     "dataset": str(csv_path.name) if csv_path.exists() else "synthetic",
     "sample_frac": SAMPLE_FRAC if csv_path.exists() else 1.0,
     "epochs": EPOCHS,

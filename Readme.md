@@ -136,12 +136,15 @@ print(m.export_info())
 
 ## BitNet b1.58
 
-Модель использует архитектуру Microsoft BitNet:
-- **Веса:** {-1, 0, +1} — 1.58 бита на параметр
-- **Активации:** int8
-- **Нормализация:** RMSNorm
-- **MLP:** SwiGLU
-- **Размер:** ~100 KB для рекомендательной модели
+Рекомендательная голова обучается с **официальными квантизаторами Microsoft** (FAQ из статьи *The Era of 1-bit LLMs*), реализация в `backend/src/models/bitnet.py`:
+
+- **Веса:** ternary {-1, 0, +1} через absmean + STE
+- **Активации:** 8-bit absmax (W1.58A8)
+- **Слои:** `BitLinear158` + RMSNorm + residual
+
+**Инференс на edge (Android):** [microsoft/BitNet](https://github.com/microsoft/BitNet) (bitnet.cpp) — см. `backend/edge/bitnetcpp/`. Экспорт GGUF: `python -m src.models.export.gguf_export`.
+
+> BitNet на GitHub — это **inference framework для 1-bit LLM**, не готовая табличная модель. В проекте — компактный **SimpleBitNet** с теми же b1.58-операторами, обученный на Santander-подобных фичах.
 
 ## Docker
 

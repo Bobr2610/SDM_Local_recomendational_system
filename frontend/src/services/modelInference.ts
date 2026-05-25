@@ -98,14 +98,16 @@ function rmsNorm(x: Float32Array, gamma: Float32Array): Float32Array {
   return out
 }
 
+/** 8-bit absmax activation quant (Microsoft BitNet b1.58 FAQ). */
 function actQuant8(x: Float32Array): Float32Array {
   let maxAbs = 0
   for (let i = 0; i < x.length; i++) maxAbs = Math.max(maxAbs, Math.abs(x[i]))
-  const scale = Math.max(maxAbs, 1e-8) / 127
+  const scale = 127 / Math.max(maxAbs, 1e-5)
   const out = new Float32Array(x.length)
   for (let i = 0; i < x.length; i++) {
-    const q = Math.round(x[i] / scale)
-    out[i] = Math.max(-127, Math.min(127, q)) * scale
+    const q = Math.round(x[i] * scale)
+    const clamped = Math.max(-128, Math.min(127, q))
+    out[i] = (clamped / scale)
   }
   return out
 }

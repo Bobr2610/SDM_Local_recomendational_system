@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 
@@ -20,48 +19,8 @@ WEIGHTS_PATH = EXPORT_DIR / "bitnet_weights.json"
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(BACKEND))
 from src.evaluation.metrics import evaluate_all
+from src.models.bitnet import SimpleBitNet, load_frontend_weights
 from src.training.calibration import fit_temperature
-
-
-class RMSNorm(nn.Module):
-    def __init__(self, dim, eps=1e-6):
-        super().__init__()
-        self.eps = eps
-        self.w = nn.Parameter(torch.ones(dim))
-
-    def forward(self, x):
-        return x / (x.pow(2).mean(-1, keepdim=True) + self.eps).sqrt() * self.w
-
-
-class BitLinear(nn.Module):
-    def __init__(self, d_in, d_out):
-        super().__init__()
-        self.norm = RMSNorm(d_in)
-        self.weight = nn.Parameter(torch.zeros(d_out, d_in))
-        self.bias = nn.Parameter(torch.zeros(d_out))
-
-    def forward(self, x):
-        x = self.norm(x)
-        s = x.abs().max(-1, keepdim=True).values.clamp(1e-8) / 127
-        xq = torch.clamp(torch.round(x / s), -127, 127) * s
-        g = self.weight.abs().mean()
-        w = torch.clamp(torch.round(self.weight / (g + 1e-8)), -1, 1) * g
-        return F.linear(xq, w, self.bias)
-
-
-class BitNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.embed = nn.Linear(32, 128, bias=False)
-        self.blocks = nn.ModuleList([nn.Sequential(BitLinear(128, 128)) for _ in range(3)])
-        self.norm = RMSNorm(128)
-        self.head = nn.Linear(128, 36)
-
-    def forward(self, x):
-        x = self.embed(x)
-        for b in self.blocks:
-            x = F.silu(b[0](x)) + x
-        return self.head(self.norm(x))
 
 
 def load_data():
@@ -89,7 +48,16 @@ def load_data():
     product_cols = [
         c
         for c in df.columns
-        if c not in ["user_id", "sex", "age", "is_new_customer", "seniority_months", "income", "segment"]
+        if c
+        not in [
+            "user_id",
+            "sex",
+            "age",
+            "is_new_customer",
+            "seniority_months",
+            "income",
+            "segment",
+        ]
     ]
     y_raw = df[product_cols].fillna(0).values.astype(np.float32)
     y = np.zeros((n, 36), dtype=np.float32)
@@ -97,31 +65,18 @@ def load_data():
     return X, y, product_cols
 
 
-def load_weights(model: BitNet, weights: dict):
-    for name, param in model.named_parameters():
-        if name not in weights:
-            continue
-        entry = weights[name]
-        arr = np.array(entry["data"], dtype=np.float32)
-        if name.endswith("weight") and arr.ndim == 2 and "gamma" in entry:
-            arr = arr * entry["gamma"]
-        t = torch.from_numpy(arr)
-        if t.shape == param.shape:
-            param.data.copy_(t)
-
-
 def main():
     if not WEIGHTS_PATH.exists():
         raise FileNotFoundError(f"Missing {WEIGHTS_PATH}, run train_santander.py first")
 
-    X, y, product_cols = load_data()
+    X, y, _product_cols = load_data()
     _, X_val, _, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
     X_val_t = torch.from_numpy(X_val)
     y_val_t = torch.from_numpy(y_val)
 
     weights = json.loads(WEIGHTS_PATH.read_text(encoding="utf-8"))
-    model = BitNet()
-    load_weights(model, weights)
+    model = SimpleBitNet()
+    load_frontend_weights(model, weights)
     model.eval()
 
     with torch.no_grad():
@@ -137,7 +92,7 @@ def main():
     margins = top1 - top2
 
     out = {
-        "model": "BitNet b1.58",
+        "model": "BitNet b1.58 (Microsoft FAQ + bitnet.cpp)",
         "dataset": "train_wide.csv",
         "sample_frac": 0.1,
         "epochs": 15,
