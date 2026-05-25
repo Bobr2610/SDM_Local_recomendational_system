@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.model_selection import train_test_split
 
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = ROOT / "backend"
@@ -150,10 +151,13 @@ class BitNet(nn.Module):
         return self.head(self.norm(x))
 
 device = 'cpu'
-X_tr = torch.from_numpy(X[:int(len(X)*0.8)]).to(device)
-y_tr = torch.from_numpy(y[:int(len(y)*0.8)]).to(device)
-X_val = torch.from_numpy(X[int(len(X)*0.8):]).to(device)
-y_val = torch.from_numpy(y[int(len(y)*0.8):]).to(device)
+X_tr, X_val, y_tr, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42, shuffle=True
+)
+X_tr = torch.from_numpy(X_tr).to(device)
+y_tr = torch.from_numpy(y_tr).to(device)
+X_val = torch.from_numpy(X_val).to(device)
+y_val = torch.from_numpy(y_val).to(device)
 
 model = BitNet(d_in=32, d_out=36, d_h=128, n_layers=3).to(device)
 opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)

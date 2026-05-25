@@ -2,6 +2,7 @@
 import sys
 sys.path.insert(0, '.')
 import torch
+from sklearn.model_selection import train_test_split
 from src.models.bitnet import BitNetRecommender
 from src.pipeline.loaders.santander import load_santander, _generate_synthetic_data
 from src.evaluation.metrics import precision_at_k, ndcg_at_k
@@ -20,10 +21,13 @@ print(f'  X: {X.shape}, y: {y.shape}')
 print(f'  Mean products/user: {y.sum(axis=1).mean():.1f}')
 
 print('\n=== 3. Training (5 epochs) ===')
-X_tr = torch.from_numpy(X[:800])
-y_tr = torch.from_numpy(y[:800])
-X_val = torch.from_numpy(X[800:])
-y_val = torch.from_numpy(y[800:])
+X_tr, X_val, y_tr, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42, shuffle=True
+)
+X_tr = torch.from_numpy(X_tr)
+y_tr = torch.from_numpy(y_tr)
+X_val = torch.from_numpy(X_val)
+y_val = torch.from_numpy(y_val)
 
 opt = torch.optim.AdamW(m.parameters(), lr=1e-3)
 loss_fn = torch.nn.BCEWithLogitsLoss()
