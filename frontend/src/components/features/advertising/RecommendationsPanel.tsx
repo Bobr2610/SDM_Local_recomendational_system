@@ -1,19 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AdProduct } from '../../../data/productParser'
-import {
-  extractFeatures,
-  predict,
-  initBitNet,
-  personalize,
-  getTopK,
-  getProductId,
-} from '../../../services/modelInference'
 import { getAllProducts, getHomeAdProducts } from '../../../data/productParser'
 import { colors } from '../../../config/theme'
 import { SafeIcon } from '../../ui/Icons'
 import type { ProfileData } from './ClientSelector'
 import { useUserInputStore } from '../../../store/userInputStore'
+import { recommendProducts } from '../../../services/modelInference'
+import { useBitNetReady } from '../../../hooks/useBitNet'
 
 const CATEGORY_ICONS: Record<string, { emoji: string; bg: string }> = {
   deposits_and_savings_accounts_individuals: { emoji: '🏦', bg: '#EBF2FF' },
@@ -82,7 +76,15 @@ function HeroRecCard({ product, onTrack }: { product: AdProduct; onTrack: (id: s
   )
 }
 
-function SecondaryRecCard({ product, rank, onTrack }: { product: AdProduct; rank: number; onTrack: (id: string) => void }) {
+function SecondaryRecCard({
+  product,
+  rank,
+  onTrack,
+}: {
+  product: AdProduct
+  rank: number
+  onTrack: (id: string) => void
+}) {
   const meta = getCategoryMeta(product.category)
 
   return (
@@ -124,42 +126,6 @@ function SecondaryRecCard({ product, rank, onTrack }: { product: AdProduct; rank
       </p>
     </Link>
   )
-}
-
-function useRecommendations(profile: ProfileData | null, mode: 'profile' | 'popular'): AdProduct[] {
-  const clickHistory = useUserInputStore((s) => s.clickHistory)
-  return useMemo(() => {
-    if (mode === 'popular') {
-      return getHomeAdProducts().slice(0, 5)
-    }
-    if (!profile) return []
-
-    const CURRENCY_MAP: Record<string, number> = { RUB: 0, USD: 1, EUR: 2, CNY: 3 }
-    const ACCOUNT_MAP: Record<string, number> = { current: 0, savings: 1, deposit: 2, card: 3 }
-
-    void initBitNet()
-    const features = extractFeatures({
-      age: profile.age,
-      balance: profile.balance,
-      monthlyIncome: profile.monthlyIncome,
-      accountType: ACCOUNT_MAP[profile.accountType] ?? 0,
-      currency: CURRENCY_MAP[profile.currency] ?? 0,
-      clicks: clickHistory,
-      seniorityMonths: (profile as any).seniorityMonths,
-      isNewCustomer: (profile as any).isNewCustomer,
-      sex: (profile as any).sex,
-      segmentVip: (profile as any).segmentVip,
-      segmentStudent: (profile as any).segmentStudent,
-    })
-    const scores = predict(features)
-    const personalized = personalize(scores, clickHistory)
-    const top5 = getTopK(personalized, 5)
-    const allProducts = getAllProducts()
-    return top5.map((idx) => {
-      const prodId = getProductId(idx)
-      return allProducts.find((p) => p.id === prodId) ?? allProducts[0]
-    })
-  }, [profile, mode, clickHistory])
 }
 
 function ModeSwitch({
@@ -206,8 +172,35 @@ function ModeSwitch({
 
 export function RecommendationsPanel({ profile }: { profile: ProfileData | null }) {
   const [mode, setMode] = useState<'profile' | 'popular'>('profile')
-  const products = useRecommendations(profile, mode)
+  const [products, setProducts] = useState<AdProduct[]>([])
+  const modelReady = useBitNetReady()
+  const clickHistory = useUserInputStore((s) => s.clickHistory)
   const trackClick = useUserInputStore((s) => s.trackClick)
+
+  useEffect(() => {
+    if (mode === 'popular') {
+      setProducts(getHomeAdProducts().slice(0, 5))
+      return
+    }
+    if (!profile || !modelReady) {
+      setProducts([])
+      return
+    }
+
+    let cancelled = false
+    recommendProducts(profile, clickHistory, 5).then((recs) => {
+      if (cancelled) return
+      const allProducts = getAllProducts()
+      const resolved = recs
+        .map((r) => allProducts.find((p) => p.id === r.productId))
+        .filter((p): p is AdProduct => p != null)
+      setProducts(resolved.length > 0 ? resolved : allProducts.slice(0, 5))
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [profile, mode, clickHistory, modelReady])
 
   return (
     <div

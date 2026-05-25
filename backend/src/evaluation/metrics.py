@@ -2,12 +2,11 @@
 Метрики оценки рекомендательной модели.
 
 Использование:
-    from src.evaluation.metrics import precision_at_k, ndcg_at_k, ctr_simulation, business_value
+    from src.evaluation.metrics import precision_at_k, ndcg_at_k, business_value
 
 Архитектура:
 - Precision@k: доля релевантных среди top-k
 - NDCG@k: нормализованный DCG
-- CTR simulation: симуляция кликов по top-k
 - Business value: profit_score взвешенная сумма
 """
 
@@ -43,16 +42,6 @@ def ndcg_at_k(y_true: np.ndarray, y_pred: np.ndarray, k: int = 5) -> float:
     return ndcg / len(y_true)
 
 
-def ctr_simulation(y_true: np.ndarray, y_pred: np.ndarray, k: int = 5, decay: float = 0.8) -> float:
-    """Симуляция CTR: позиционный bias (decay^position) * relevance."""
-    top_k = np.argsort(-y_pred, axis=1)[:, :k]
-    ctr = 0.0
-    for i in range(len(y_true)):
-        for pos, idx in enumerate(top_k[i]):
-            ctr += decay ** pos * y_true[i, idx]
-    return ctr / len(y_true)
-
-
 def business_value(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -82,6 +71,5 @@ def evaluate_all(
     return {
         f"precision@{k}": precision_at_k(y_true, y_pred, k),
         f"ndcg@{k}": ndcg_at_k(y_true, y_pred, k),
-        f"ctr@{k}": ctr_simulation(y_true, y_pred, k),
         f"business_value@{k}": business_value(y_true, y_pred, profit_scores, k),
     }

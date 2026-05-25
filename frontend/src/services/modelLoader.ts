@@ -11,7 +11,7 @@
  */
 
 import type { UserFeatures } from './modelInference'
-import { extractFeatures, predictHeuristic } from './modelInference'
+import { extractFeatures, initBitNet, predict } from './modelInference'
 
 export type PredictFn = (features: UserFeatures) => Promise<Float32Array>
 
@@ -35,8 +35,10 @@ export async function getPredictFn(): Promise<PredictFn> {
     // ONNX не загрузился — используем JS-эвристику
   }
 
+  await initBitNet()
   predictFn = async (f) => {
-    return predictHeuristic(extractFeatures(f))
+    const feats = extractFeatures(f)
+    return predict(feats)
   }
   return predictFn
 }

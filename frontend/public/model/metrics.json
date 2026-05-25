@@ -1,0 +1,22 @@
+{
+  "model": "BitNet b1.58",
+  "dataset": "train_wide.csv",
+  "sample_frac": 0.1,
+  "epochs": 15,
+  "train_samples": 30091,
+  "val_samples": 7523,
+  "train_loss": null,
+  "val_loss": 0.1408,
+  "loss": "focal + lambda@5",
+  "metrics": {
+    "precision@5": 0.2705,
+    "ndcg@5": 0.7402,
+    "business_value@5": 3.237
+  },
+  "inference": {
+    "temperature": 0.45,
+    "min_score": 0.6145,
+    "min_margin": 0.4503
+  },
+  "updated_at": "2026-05-25T19:59:21.377603+00:00"
+}

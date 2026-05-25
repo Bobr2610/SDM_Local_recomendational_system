@@ -9,6 +9,12 @@ export interface ProfileData {
   monthlyIncome: number
   accountType: AccountType
   currency: Currency
+  /** Поля для BitNet (как в train_wide.csv). */
+  seniorityMonths: number
+  isNewCustomer: number
+  sex: number
+  segmentVip: number
+  segmentStudent: number
   info: string
   avatar: string
   avatarBg: string
@@ -24,6 +30,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 15000,
     accountType: 'card',
     currency: 'RUB',
+    seniorityMonths: 6,
+    isNewCustomer: 1,
+    sex: 0,
+    segmentVip: 0,
+    segmentStudent: 1,
     info: 'Студент',
     avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=Matvey&backgroundColor=b6e3f4',
     avatarBg: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
@@ -42,6 +53,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 120000,
     accountType: 'current',
     currency: 'RUB',
+    seniorityMonths: 48,
+    isNewCustomer: 0,
+    sex: 1,
+    segmentVip: 0,
+    segmentStudent: 0,
     info: 'Менеджер',
     avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=Artem&backgroundColor=c0aede',
     avatarBg: 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)',
@@ -60,6 +76,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 350000,
     accountType: 'savings',
     currency: 'RUB',
+    seniorityMonths: 72,
+    isNewCustomer: 0,
+    sex: 1,
+    segmentVip: 0,
+    segmentStudent: 0,
     info: 'Предприниматель',
     avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=Danya&backgroundColor=ffd5dc',
     avatarBg: 'linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%)',
@@ -78,6 +99,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 5000000,
     accountType: 'deposit',
     currency: 'RUB',
+    seniorityMonths: 180,
+    isNewCustomer: 0,
+    sex: 1,
+    segmentVip: 1,
+    segmentStudent: 0,
     info: 'Топ-менеджер',
     avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=Mikhail&backgroundColor=d1d4f9',
     avatarBg: 'linear-gradient(135deg, #DBEAFE 0%, #93C5FD 100%)',

@@ -4,8 +4,12 @@
 Запуск: python backend/scripts/train_santander.py
 """
 
-import sys, json
+import os
+import sys
+import json
 from pathlib import Path
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
 import torch
@@ -20,17 +24,28 @@ DATASET_DIR = BACKEND / "datasets" / "raw"
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(BACKEND))
 
+from src.evaluation.metrics import evaluate_all
+from src.training.losses import combined_recommendation_loss
+from src.training.calibration import fit_temperature
+
+SAMPLE_FRAC = float(os.environ.get("SAMPLE_FRAC", "0.2"))
+EPOCHS = int(os.environ.get("EPOCHS", "15"))
+FOCAL_WEIGHT = float(os.environ.get("FOCAL_WEIGHT", "1.0"))
+RANK_WEIGHT = float(os.environ.get("RANK_WEIGHT", "0.5"))
+
 # ═══════════════════════════════════════
 # 1. Загрузка датасета
 # ═══════════════════════════════════════
 
 print("=== Loading custom dataset ===")
 csv_path = DATASET_DIR / "train_wide.csv"
+product_cols: list[str] = []
 
 if csv_path.exists():
     print(f"  Loading {csv_path}...")
     df = pd.read_csv(csv_path, low_memory=False)
-    df = df.sample(frac=0.1, random_state=42).reset_index(drop=True)
+    df = df.sample(frac=SAMPLE_FRAC, random_state=42).reset_index(drop=True)
+    print(f"  Sample frac: {SAMPLE_FRAC}")
     n = len(df)
     print(f"  Rows: {n}")
 
@@ -103,6 +118,8 @@ else:
         prob = np.clip(base + 0.3 * (X[:,0]+3)/6 + 0.3 * (X[:,1]+3)/6 + rng.normal(0, 0.1, n), 0, 1)
         y[:, i] = (rng.random(n) < prob).astype(np.float32)
 
+    product_cols = [f"prod-{i}" for i in range(22)]
+
 # ═══════════════════════════════════════
 # 2. BitNet b1.58 модель
 # ═══════════════════════════════════════
@@ -161,23 +178,44 @@ y_val = torch.from_numpy(y_val).to(device)
 
 model = BitNet(d_in=32, d_out=36, d_h=128, n_layers=3).to(device)
 opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
-loss_fn = nn.BCEWithLogitsLoss()
 
-for epoch in range(15):
+final_train_loss = 0.0
+final_val_loss = 0.0
+print(f"  Loss: Focal (w={FOCAL_WEIGHT}) + Lambda@5 (w={RANK_WEIGHT})")
+
+for epoch in range(EPOCHS):
     model.train()
     total = 0.0
+    n_batches = 0
     for i in range(0, len(X_tr), 128):
         xb, yb = X_tr[i:i+128], y_tr[i:i+128]
         opt.zero_grad()
-        l = loss_fn(model(xb), yb)
+        logits = model(xb)
+        l = combined_recommendation_loss(
+            logits,
+            yb,
+            focal_weight=FOCAL_WEIGHT,
+            rank_weight=RANK_WEIGHT,
+            rank_k=5,
+        )
         l.backward()
         opt.step()
         total += l.item()
-    
+        n_batches += 1
+
     model.eval()
     with torch.no_grad():
-        vl = loss_fn(model(X_val), y_val).item()
-    print(f"  Epoch {epoch+1:2d}: loss={total/(len(X_tr)//128+1):.4f} val={vl:.4f}")
+        val_logits = model(X_val)
+        val_focal = combined_recommendation_loss(
+            val_logits,
+            y_val,
+            focal_weight=FOCAL_WEIGHT,
+            rank_weight=RANK_WEIGHT,
+            rank_k=5,
+        )
+        final_val_loss = val_focal.item()
+    final_train_loss = total / max(n_batches, 1)
+    print(f"  Epoch {epoch+1:2d}/{EPOCHS}: loss={final_train_loss:.4f} val={final_val_loss:.4f}")
 
 # ═══════════════════════════════════════
 # 3. Экспорт весов для фронтенда
@@ -213,6 +251,65 @@ with open(export_dir / "normalization.json", 'w') as f:
     json.dump(norm_data, f)
 print(f"  Norms saved:   {export_dir / 'normalization.json'}")
 
+feature_order = {
+    "input_features": [
+        "age", "seniority_months", "income", "is_new_customer",
+        "sex_enc", "segment_INDIVIDUALS", "segment_VIP", "segment_STUDENTS",
+    ],
+    "product_names": product_cols[:36],
+}
+with open(export_dir / "feature_order.json", 'w') as f:
+    json.dump(feature_order, f, indent=2)
+print(f"  Features saved: {export_dir / 'feature_order.json'}")
+
+# ═══════════════════════════════════════
+# 3b. Метрики качества на validation
+# ═══════════════════════════════════════
+
+print("\n=== Temperature calibration ===")
+model.eval()
+with torch.no_grad():
+    val_logits = model(X_val)
+    temperature = fit_temperature(val_logits, y_val)
+    y_pred = torch.sigmoid(val_logits / temperature).cpu().numpy()
+    y_true_np = y_val.cpu().numpy()
+    rec_metrics = evaluate_all(y_true_np, y_pred, k=5)
+
+print(f"  temperature: {temperature:.3f}")
+
+for name, value in rec_metrics.items():
+    print(f"  {name}: {value:.4f}")
+
+# Пороги для фронта: отсекаем слабые рекомендации
+probs = y_pred
+top1 = np.sort(probs, axis=1)[:, -1]
+top2 = np.sort(probs, axis=1)[:, -2]
+margins = top1 - top2
+min_score = float(np.percentile(top1, 25))
+min_margin = float(max(0.03, np.percentile(margins, 25)))
+
+metrics_export = {
+    "model": "BitNet b1.58",
+    "dataset": str(csv_path.name) if csv_path.exists() else "synthetic",
+    "sample_frac": SAMPLE_FRAC if csv_path.exists() else 1.0,
+    "epochs": EPOCHS,
+    "train_samples": int(len(X_tr)),
+    "val_samples": int(len(X_val)),
+    "train_loss": round(final_train_loss, 4),
+    "val_loss": round(final_val_loss, 4),
+    "loss": "focal + lambda@5",
+    "metrics": {k: round(float(v), 4) for k, v in rec_metrics.items()},
+    "inference": {
+        "temperature": round(temperature, 4),
+        "min_score": round(min_score, 4),
+        "min_margin": round(min_margin, 4),
+    },
+    "updated_at": datetime.now(timezone.utc).isoformat(),
+}
+with open(export_dir / "metrics.json", 'w') as f:
+    json.dump(metrics_export, f, indent=2)
+print(f"  Metrics saved: {export_dir / 'metrics.json'}")
+
 # ═══════════════════════════════════════
 # 4. Проверка
 # ═══════════════════════════════════════
@@ -221,7 +318,7 @@ print("\n=== Verification ===")
 model.eval()
 test_x = torch.randn(3, 32)
 with torch.no_grad():
-    out = torch.sigmoid(model(test_x))
+    out = torch.sigmoid(model(test_x) / temperature)
     top3 = out.topk(3, dim=1)
     print(f"  Sample predictions:")
     for i in range(3):
