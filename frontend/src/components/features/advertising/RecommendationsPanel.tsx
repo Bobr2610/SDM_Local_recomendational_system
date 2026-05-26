@@ -50,13 +50,13 @@ function HeroRecCard({ product, onTrack }: { product: AdProduct; onTrack: (id: s
         boxShadow: colors.shadow.hero,
       }}
     >
-      <div className="p-4 sm:p-5 lg:p-6 flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center relative">
+      <div className="rec-hero__layout relative">
         <div
           className="pointer-events-none absolute -right-8 -top-8 w-40 h-40 rounded-full opacity-30"
           style={{ background: 'oklch(99% 0.005 252 / 0.12)' }}
           aria-hidden
         />
-        <div className="flex-1 min-w-0 w-full relative z-[1]">
+        <div className="rec-hero__content relative z-[1]">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="rec-rank-badge rec-rank-badge--hero">Лучший выбор</span>
             <span className="rec-tag rec-tag--on-hero">{getCategoryTag(product.category)}</span>
@@ -64,7 +64,7 @@ function HeroRecCard({ product, onTrack }: { product: AdProduct; onTrack: (id: s
           <h3 className="text-lg sm:text-xl font-bold text-white mb-2 leading-tight tracking-tight">{product.name}</h3>
           <p className="text-sm leading-relaxed line-clamp-3 sm:line-clamp-2 text-white/85">{product.description}</p>
         </div>
-        <div className="shrink-0 self-center md:self-start relative z-[1]">
+        <div className="rec-hero__glyph relative z-[1]">
           <CategoryGlyph category={product.category} variant="hero" />
         </div>
       </div>
