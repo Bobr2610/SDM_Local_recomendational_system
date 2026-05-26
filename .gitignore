@@ -11,3 +11,5 @@ backend/models/checkpoints/bitnet_best.pt
 backend/models/export/bitnet_recommender.gguf
 
 *.csv
+.DS_Store
+venv/
