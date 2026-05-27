@@ -20,8 +20,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/src:/app/src
-      - ./backend/models:/app/models
-    command: python -c "print('Backend ready'); import time; time.sleep(99999)"
+      - ./backend/src:/app/backend/src
+      - ./frontend/src/data:/app/frontend/src/data:ro
+    working_dir: /app/backend
+    command: >
+      sh -c "pip install -q -r requirements-api.txt &&
+      uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload"
     profiles:
       - dev
