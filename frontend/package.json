@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "model:export": "python ../backend/scripts/export_model.py",
+    "model:verify": "node ../scripts/verify-model.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",

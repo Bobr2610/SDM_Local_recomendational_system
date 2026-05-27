@@ -89,23 +89,20 @@ npm run dev -- --host
 
 ### Полный цикл (обучение + деплой)
 
+**Датасет:** `backend/datasets/raw/train_wide_with_lags.csv`  
+**Подготовка данных (ноутбуки на main):** `datasets/00_clean_dataset.ipynb`, `01_generate_income_from_cleaned.ipynb` — если CSV уже готов, пропустите.
+
 ```bash
-# 1. Обучение модели (Docker)
-docker compose --profile train up train
-
-# 2. Или локально:
-cd backend
-pip install -r requirements.txt
-python -m src.models.train --epochs 10 --device cpu
-python -m src.models.export.onnx_export
-python -m src.models.export.gguf_export
-python scripts/export_to_frontend.py
-python scripts/export_to_android.py
-
-# 3. Запуск фронтенда с моделью
-cd ../frontend
-npm run dev -- --host
+pip install -r backend/requirements.txt
+python backend/scripts/run_full_pipeline.py --sample-frac 0.25 --epochs 12
+# или по шагам:
+python backend/scripts/train_santander.py
+python backend/scripts/export_model.py
+cd frontend && npm run build && npm run model:verify
 ```
+
+Телефон (Expo): `phone.bat` — API на ПК + модель в `mobile/assets/model` + установка APK.
+Браузер на телефоне: `serve-phone.bat`.
 
 ### Проверка модели
 
@@ -142,6 +139,23 @@ print(m.export_info())
 - **Нормализация:** RMSNorm
 - **MLP:** SwiGLU
 - **Размер:** ~100 KB для рекомендательной модели
+
+## Телефон (Expo + сервер на ПК)
+
+ПК и телефон в **одной Wi‑Fi**. Модель в приложении (локальный инференс), API — с ноутбука.
+
+| Команда | Что делает |
+|---------|------------|
+| `build-apk.bat` | Собрать APK → `dist/sdm-bank-debug.apk` (~2–5 мин после первой сборки) |
+| `phone.bat` | API `:8000` + export модели + `expo run:android` (USB) или Expo Go (QR) |
+| `phone.bat --expo-go` | Только Expo Go, без сборки APK |
+| `serve-phone.bat` | Браузер на телефоне (`:5173` + API) |
+
+```bat
+phone.bat
+```
+
+Перед первой сборкой: Android Studio / JDK 17, USB-отладка. Быстрый тест без APK: `phone.bat --expo-go` + приложение **Expo Go** из Play Store.
 
 ## Docker
 

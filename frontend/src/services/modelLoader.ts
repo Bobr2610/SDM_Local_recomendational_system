@@ -12,6 +12,7 @@
 
 import type { UserFeatures } from './modelInference'
 import { extractFeatures, predictHeuristic } from './modelInference'
+import { modelAssetUrl } from './modelPaths'
 
 export type PredictFn = (features: UserFeatures) => Promise<Float32Array>
 
@@ -45,7 +46,7 @@ async function createOnnxSession(): Promise<{
   run: (feats: Float32Array) => Promise<Float32Array>
 } | null> {
   try {
-    const modelPath = '/model/bitnet_recommender.onnx'
+    const modelPath = modelAssetUrl('model/bitnet_recommender.onnx')
     const resp = await fetch(modelPath, { method: 'HEAD' })
     if (!resp.ok) return null
 

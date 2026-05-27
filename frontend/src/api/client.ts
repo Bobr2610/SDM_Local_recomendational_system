@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../config/api'
+import { handleMockRequest } from './mock'
 import type { ApiRequestConfig, ApiResponse } from '../types'
 
 export class ApiClient {
@@ -11,6 +12,11 @@ export class ApiClient {
   }
 
   private async request<T>(config: ApiRequestConfig): Promise<ApiResponse<T>> {
+    if (API_CONFIG.USE_MOCK) {
+      const mock = handleMockRequest(config)
+      if (mock) return mock as ApiResponse<T>
+    }
+
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeout)
 

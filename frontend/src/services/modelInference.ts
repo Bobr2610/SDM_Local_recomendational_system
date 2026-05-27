@@ -1,3 +1,5 @@
+import { modelAssetUrl } from './modelPaths'
+
 export interface UserFeatures {
   age: number
   balance: number
@@ -15,25 +17,34 @@ export interface UserFeatures {
 let modelWeights: Record<string, { data: number[][]; gamma?: number; shape: number[] }> | null = null
 let productNames: string[] = []
 let initialized = false
+let usingTrainedWeights = false
+
+export function isBitNetLoaded(): boolean {
+  return usingTrainedWeights
+}
 
 export async function initBitNet(): Promise<boolean> {
-  if (initialized) return true
+  if (initialized) return usingTrainedWeights
   try {
     const [wResp, fResp] = await Promise.all([
-      fetch('/model/bitnet_weights.json'),
-      fetch('/model/feature_order.json'),
+      fetch(modelAssetUrl('model/bitnet_weights.json')),
+      fetch(modelAssetUrl('model/feature_order.json')),
     ])
     if (wResp.ok && fResp.ok) {
       modelWeights = await wResp.json()
       const featureOrder = await fResp.json()
       productNames = featureOrder.product_names || []
+      usingTrainedWeights = true
       initialized = true
+      console.info('[BitNet] Loaded trained weights from device bundle')
       return true
     }
+    console.warn('[BitNet] Model files missing in bundle', wResp.status, fResp.status)
   } catch (e) {
-    console.warn('[BitNet] No weights found, using heuristic')
+    console.warn('[BitNet] Failed to load weights, using heuristic', e)
   }
   initialized = true
+  usingTrainedWeights = false
   return false
 }
 
