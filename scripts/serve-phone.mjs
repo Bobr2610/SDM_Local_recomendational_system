@@ -42,7 +42,7 @@ function main() {
   console.log('  SDM — откройте на телефоне в браузере:')
   console.log(`\n  ${appUrl}`)
   console.log('\n  API:', apiUrl)
-  console.log('  Модель BitNet: локально в браузере (public/model)')
+  console.log('  Модель CatBoost: локально в браузере (public/model)')
   console.log('  Остановка: Ctrl+C')
   console.log('════════════════════════════════════════\n')
 

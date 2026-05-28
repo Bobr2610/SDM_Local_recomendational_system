@@ -7,8 +7,7 @@ __pycache__/
 node_modules/
 
 models/
-backend/models/checkpoints/bitnet_best.pt
-backend/models/export/bitnet_recommender.gguf
+backend/models/export/*.onnx
 
 *.csv
 .DS_Store

@@ -19,7 +19,16 @@ export type AnalyticsEventType =
 export interface AdSelectionRequest {
   age: number
   balance: number
+  monthlyIncome?: number
   sessionId: string
+  sex?: 0 | 1
+  seniorityMonths?: number
+  isNewCustomer?: 0 | 1
+  segment?: 'INDIVIDUALS' | 'VIP' | 'STUDENTS'
+  regionName?: string
+  accountType?: string
+  currency?: string
+  clickHistory?: Record<string, number>
 }
 
 export interface AdSelectionResponse {

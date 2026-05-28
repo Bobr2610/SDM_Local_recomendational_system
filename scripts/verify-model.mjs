@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const web = join(root, 'frontend', 'public', 'model')
 const mobile = join(root, 'mobile', 'assets', 'model')
-const required = ['bitnet_weights.json', 'feature_order.json']
+const required = ['catboost_mobile.json', 'feature_order.json']
 
 let ok = true
 

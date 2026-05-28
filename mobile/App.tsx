@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { initApiConfig } from './src/config/api'
-import { initBitNet, isBitNetLoaded } from './src/services/modelInference'
+import { initModel, isModelLoaded } from './src/services/modelInference'
 import type { RootStackParamList } from './src/navigation/types'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { ProductScreen } from './src/screens/ProductScreen'
@@ -18,7 +18,7 @@ export default function App() {
   useEffect(() => {
     void (async () => {
       await initApiConfig()
-      await initBitNet()
+      await initModel()
       setReady(true)
     })()
   }, [])
@@ -31,8 +31,8 @@ export default function App() {
     )
   }
 
-  if (__DEV__ && isBitNetLoaded()) {
-    console.info('[SDM] BitNet model loaded in bundle')
+  if (__DEV__ && isModelLoaded()) {
+    console.info('[SDM] CatBoost model loaded in bundle')
   }
 
   return (

@@ -1,60 +1,13 @@
 import { useState } from 'react'
-import type { Currency, AccountType } from '../../../store/userInputStore'
 import { useUserInputStore } from '../../../store'
+import { PROFILES, type ProfileData } from './ClientSelector'
 
-interface ProfileData {
-  name: string
-  age: number
-  balance: number
-  monthlyIncome: number
-  accountType: AccountType
-  currency: Currency
-  info: string
-  emoji: string
+const PROFILE_EMOJI: Record<string, string> = {
+  Матвей: '🎓',
+  Артем: '💼',
+  Даня: '🚀',
+  Михаил: '🏦',
 }
-
-const PROFILES: ProfileData[] = [
-  {
-    name: 'Матвей',
-    age: 20,
-    balance: 15000,
-    monthlyIncome: 5000,
-    accountType: 'card',
-    currency: 'RUB',
-    info: 'Студент',
-    emoji: '🎓',
-  },
-  {
-    name: 'Артем',
-    age: 35,
-    balance: 350000,
-    monthlyIncome: 120000,
-    accountType: 'current',
-    currency: 'RUB',
-    info: 'Менеджер',
-    emoji: '💼',
-  },
-  {
-    name: 'Даня',
-    age: 28,
-    balance: 1500000,
-    monthlyIncome: 350000,
-    accountType: 'savings',
-    currency: 'RUB',
-    info: 'Предприниматель',
-    emoji: '🚀',
-  },
-  {
-    name: 'Миша',
-    age: 55,
-    balance: 5000000,
-    monthlyIncome: 500000,
-    accountType: 'deposit',
-    currency: 'RUB',
-    info: 'Топ-менеджер',
-    emoji: '🏦',
-  },
-]
 
 function formatBalance(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M ₽`
@@ -73,6 +26,11 @@ export function AccountPopupSidebar() {
     setField('accountType', profile.accountType)
     setField('currency', profile.currency)
     setField('fullName', profile.name)
+    setField('sex', profile.sex)
+    setField('seniorityMonths', profile.seniorityMonths)
+    setField('isNewCustomer', profile.isNewCustomer)
+    setField('segment', profile.segment)
+    setField('regionName', profile.regionName)
     setSelectedIdx(idx)
   }
 
@@ -90,7 +48,7 @@ export function AccountPopupSidebar() {
                 : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
-            <span className="text-xl sm:text-2xl">{profile.emoji}</span>
+            <span className="text-xl sm:text-2xl">{PROFILE_EMOJI[profile.name] ?? '👤'}</span>
             <div className="text-left">
               <div className="font-semibold text-gray-900 text-xs sm:text-sm">{profile.name}</div>
               <div className="text-xs text-gray-500">

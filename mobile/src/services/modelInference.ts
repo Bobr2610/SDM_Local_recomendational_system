@@ -1,5 +1,7 @@
-import bitnetWeights from '../../assets/model/bitnet_weights.json'
+import catboostMobile from '../../assets/model/catboost_mobile.json'
 import featureOrder from '../../assets/model/feature_order.json'
+
+export type Segment = 'INDIVIDUALS' | 'VIP' | 'STUDENTS'
 
 export interface UserFeatures {
   age: number
@@ -11,25 +13,106 @@ export interface UserFeatures {
   seniorityMonths?: number
   isNewCustomer?: number
   sex?: number
+  segment?: Segment
   segmentVip?: number
   segmentStudent?: number
+  regionName?: string
 }
 
-type WeightEntry = { data: number[][]; gamma?: number; shape: number[] }
+interface SurrogateMeta {
+  coef: number[]
+  intercept: number
+  products: string[]
+  numeric_layout: {
+    synthetic: string[]
+    own_products: string[]
+    product_one_hot: string[]
+  }
+}
 
-const modelWeights = bitnetWeights as unknown as Record<string, WeightEntry>
-const productNames: string[] = (featureOrder as { product_names?: string[] }).product_names ?? []
+interface MobileBundle {
+  products: string[]
+  surrogate: SurrogateMeta
+}
+
+const bundle = catboostMobile as unknown as MobileBundle
+const productNames: string[] =
+  bundle.products ?? (featureOrder as { product_names?: string[] }).product_names ?? []
 let initialized = false
 
-export function isBitNetLoaded(): boolean {
-  return initialized && Object.keys(modelWeights).length > 0
+export function isModelLoaded(): boolean {
+  return initialized && Boolean(bundle?.surrogate?.coef?.length)
 }
 
-export async function initBitNet(): Promise<boolean> {
-  if (initialized) return isBitNetLoaded()
+export const isBitNetLoaded = isModelLoaded
+
+export async function initModel(): Promise<boolean> {
+  if (initialized) return isModelLoaded()
   initialized = true
-  console.info('[BitNet] Loaded trained weights from app bundle')
-  return isBitNetLoaded()
+  console.info('[CatBoost] Loaded mobile surrogate', productNames.length, 'products')
+  return isModelLoaded()
+}
+
+export const initBitNet = initModel
+
+function syntheticFromProfile(age: number, income: number, balance: number, segment: string): Record<string, number> {
+  const segMul = segment === 'VIP' ? 1.4 : segment === 'STUDENTS' ? 0.65 : 1
+  const ageMul = age < 25 ? 0.85 : age > 50 ? 1.1 : 1
+  const turnover = Math.max(income, 1) * 1.15 * ageMul + balance * 0.02
+  const ops = Math.min(80, Math.max(2, (turnover / 8000) * segMul))
+  const activeDays = Math.min(28, Math.max(2, ops * 0.55))
+  const expenses = turnover * 0.62
+  return {
+    synthetic_activity_score: Math.min(2.5, Math.max(0.05, (Math.log1p(turnover) / 12) * segMul)),
+    synthetic_operations_cnt_30d: ops,
+    synthetic_active_days_30d: activeDays,
+    synthetic_expenses_30d: expenses,
+    synthetic_income_30d: Math.max(income, 1),
+    synthetic_turnover_30d: turnover,
+    synthetic_avg_operation_size_30d: turnover / Math.max(ops, 1),
+    synthetic_financial_intensity: Math.min(3, turnover / (balance + income + 1)),
+    synthetic_inflow_outflow_ratio: Math.min(2.5, Math.max(0.3, income / (expenses + 1))),
+    synthetic_credit_pressure: Math.min(1.5, expenses / (balance + income + 1)),
+    synthetic_savings_capacity: Math.min(2, (balance + income - expenses) / (income + 1)),
+    synthetic_credit_capacity: Math.min(2, Math.max(0, (income * 3 - expenses) / (income * 3 + 1))),
+    synthetic_business_intensity: segment === 'VIP' && balance > 500_000 ? 0.35 : 0.08,
+  }
+}
+
+function segmentFromFeatures(f: UserFeatures): string {
+  if (f.segment) return f.segment
+  if (f.segmentStudent) return 'STUDENTS'
+  if (f.segmentVip) return 'VIP'
+  if (f.accountType === 3) return 'STUDENTS'
+  if (f.balance >= 1_000_000 || f.monthlyIncome >= 500_000) return 'VIP'
+  return 'INDIVIDUALS'
+}
+
+function buildVector(f: UserFeatures, product: string): number[] {
+  const layout = bundle.surrogate.numeric_layout
+  const segment = segmentFromFeatures(f)
+  const syn = syntheticFromProfile(f.age, f.monthlyIncome, f.balance, segment)
+  const vec: number[] = [
+    f.age,
+    f.seniorityMonths ?? 24,
+    f.monthlyIncome,
+    f.isNewCustomer ?? 0,
+  ]
+  for (const key of layout.synthetic) vec.push(syn[key] ?? 0)
+  for (const pid of layout.own_products) vec.push((f.clicks[pid] ?? 0) > 0 ? 1 : 0)
+  vec.push((f.sex ?? 1) === 1 ? 1 : 0)
+  vec.push(segment === 'VIP' ? 1 : 0)
+  vec.push(segment === 'STUDENTS' ? 1 : 0)
+  for (const pid of layout.product_one_hot) vec.push(pid === product ? 1 : 0)
+  return vec
+}
+
+function scoreProduct(f: UserFeatures, product: string): number {
+  const { coef, intercept } = bundle.surrogate
+  const vec = buildVector(f, product)
+  let dot = intercept
+  for (let i = 0; i < coef.length && i < vec.length; i++) dot += coef[i] * vec[i]
+  return 1 / (1 + Math.exp(-dot))
 }
 
 export function getProductIndex(productId: string): number {
@@ -40,124 +123,10 @@ export function getProductId(modelIndex: number): string | null {
   return productNames[modelIndex] ?? null
 }
 
-function rmsNorm(x: Float32Array, gamma: Float32Array): Float32Array {
-  let sq = 0
-  for (let i = 0; i < x.length; i++) sq += x[i] * x[i]
-  const rms = Math.sqrt(sq / x.length + 1e-6)
-  const out = new Float32Array(x.length)
-  for (let i = 0; i < x.length; i++) out[i] = x[i] / rms * gamma[i]
-  return out
-}
-
-function actQuant8(x: Float32Array): Float32Array {
-  let maxAbs = 0
-  for (let i = 0; i < x.length; i++) maxAbs = Math.max(maxAbs, Math.abs(x[i]))
-  const scale = Math.max(maxAbs, 1e-8) / 127
-  const out = new Float32Array(x.length)
-  for (let i = 0; i < x.length; i++) {
-    const q = Math.round(x[i] / scale)
-    out[i] = Math.max(-127, Math.min(127, q)) * scale
-  }
-  return out
-}
-
-function bitLinear(x: Float32Array, wData: number[][], gamma: number, bias: number[]): Float32Array {
-  const outDim = wData.length
-  const inDim = x.length
-  const out = new Float32Array(outDim)
-  for (let i = 0; i < outDim; i++) {
-    let sum = bias[i] || 0
-    const row = wData[i]
-    for (let j = 0; j < inDim; j++) sum += row[j] * gamma * x[j]
-    out[i] = sum
-  }
-  return out
-}
-
-function silu(x: Float32Array): Float32Array {
-  const out = new Float32Array(x.length)
-  for (let i = 0; i < x.length; i++) out[i] = x[i] * (1 / (1 + Math.exp(-x[i])))
-  return out
-}
-
-function getWeights(pattern: string): { w: number[][]; g: number; b: number[] } | null {
-  const wk = Object.keys(modelWeights).find((k) => k.includes(pattern))
-  if (!wk) return null
-  const w = modelWeights[wk]
-  const bk = Object.keys(modelWeights).find((k) => k.includes(pattern.replace('weight', 'bias')))
-  const bias = bk ? (modelWeights[bk].data as unknown as number[]) : new Array(w.shape[0]).fill(0)
-  return { w: w.data as number[][], g: w.gamma ?? 1, b: bias }
-}
-
-export function extractFeatures(f: UserFeatures): Float32Array {
-  const feats = new Float32Array(32)
-  feats[0] = (f.age - 35) / 15
-  feats[1] = (f.balance - 50000) / 30000
-  feats[2] = (f.monthlyIncome - 60000) / 40000
-  feats[3] = f.accountType / 3
-  feats[4] = f.currency / 3
-  feats[5] = (f.seniorityMonths ?? 0) / 120
-  feats[6] = f.isNewCustomer ?? 0
-  feats[7] = f.segmentVip ?? 0
-  feats[8] = f.segmentStudent ?? 0
-  for (const [id, count] of Object.entries(f.clicks)) {
-    const idx = productNames.indexOf(id)
-    if (idx >= 0) feats[9 + (idx % 23)] = Math.min(count / 100, 1)
-  }
-  return feats
-}
-
-export function predict(feats: Float32Array): Float32Array {
-  try {
-    let x = feats
-    const emb = getWeights('embed.weight')
-    if (emb) {
-      const out = new Float32Array(emb.w.length)
-      for (let i = 0; i < emb.w.length; i++) {
-        let s = 0
-        for (let j = 0; j < feats.length; j++) s += emb.w[i][j] * feats[j]
-        out[i] = s
-      }
-      x = out
-    }
-    const blockKeys = Object.keys(modelWeights).filter((k) => k.includes('blocks') && k.includes('weight'))
-    for (const bk of blockKeys) {
-      const prefix = bk.replace(/\.weight$/, '')
-      const norm = modelWeights[prefix + '.norm.w']
-      const bl = getWeights(prefix + '.weight')
-      if (!bl || !norm) continue
-      const nGamma = new Float32Array(norm.data as unknown as number[])
-      let xn = rmsNorm(x, nGamma)
-      xn = actQuant8(xn)
-      let xl = bitLinear(xn, bl.w, bl.g, bl.b)
-      xl = silu(xl)
-      if (xl.length === x.length) {
-        const prevX = new Float32Array(x)
-        for (let i = 0; i < Math.min(xl.length, prevX.length); i++) x[i] = xl[i] + prevX[i]
-      }
-    }
-    const fnKey = Object.keys(modelWeights).find((k) => k.includes('norm') && k.includes('.w'))
-    if (fnKey) x = rmsNorm(x, new Float32Array(modelWeights[fnKey].data as unknown as number[]))
-    const hd = getWeights('head.weight')
-    if (hd) x = bitLinear(x, hd.w, hd.g, hd.b)
-    return x.slice(0, 36) as Float32Array
-  } catch {
-    return predictHeuristic(feats)
-  }
-}
-
-export function predictHeuristic(feats: Float32Array): Float32Array {
-  const scores = new Float32Array(36)
-  const seed = feats.reduce((a, b) => a * 31 + Math.round(b * 1000), 0)
-  const rng = ((s: number) => () => {
-    s = (s * 16807 + 0) % 2147483647
-    return s / 2147483647
-  })(Math.abs(seed))
-  const ageFactor = (feats[0] + 1) / 2
-  const balFactor = (feats[1] + 3) / 6
-  for (let i = 0; i < 36; i++) {
-    scores[i] = 0.12 + 0.04 * Math.sin(i * 0.5) + 0.25 * ageFactor + 0.25 * balFactor + (rng() - 0.5) * 0.15
-  }
+export function predict(f: UserFeatures): Float32Array {
+  const products = productNames
+  const scores = new Float32Array(products.length)
+  for (let i = 0; i < products.length; i++) scores[i] = scoreProduct(f, products[i])
   return scores
 }
 

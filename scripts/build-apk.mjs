@@ -11,11 +11,18 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const isWin = process.platform === 'win32'
+const venvPy = join(
+  root,
+  '.venv',
+  isWin ? 'Scripts' : 'bin',
+  isWin ? 'python.exe' : 'python',
+)
+const pythonCmd = existsSync(venvPy) ? venvPy : 'python'
 const mobile = join(root, 'mobile')
 const android = join(mobile, 'android')
 const appGradle = join(android, 'app', 'build.gradle')
 const dist = join(root, 'dist')
-const isWin = process.platform === 'win32'
 
 const SDK_ROOT =
   process.env.ANDROID_HOME ||
@@ -129,7 +136,7 @@ function main() {
 
   log(`JAVA_HOME=${javaHome}`)
   log('Экспорт модели…')
-  run('python', [join(root, 'backend', 'scripts', 'export_model.py')], { env })
+  run(pythonCmd, [join(root, 'backend', 'scripts', 'export_model.py')], { env })
 
   log('Сборка APK (JS bundle вшивается в debug)…')
   run(isWin ? 'gradlew.bat' : './gradlew', ['--stop'], { cwd: android, env })
