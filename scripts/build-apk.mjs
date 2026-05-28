@@ -126,6 +126,7 @@ function main() {
     NODE_ENV: 'production',
     EXPO_PUBLIC_USE_MOCK: 'false',
     EXPO_PUBLIC_USE_LOCAL_MODEL: 'true',
+    EXPO_PUBLIC_RUN_BENCHMARK: process.env.EXPO_PUBLIC_RUN_BENCHMARK ?? 'false',
   }
 
   ensureDebuggableVariantsEmpty()

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ClientProfile } from '../components/ClientProfile'
 import { ClientSelector } from '../components/ClientSelector'
 import { RecommendationsPanel } from '../components/RecommendationsPanel'
+import { InferenceBenchmarkBanner } from '../components/InferenceBenchmarkBanner'
 import { Header } from '../components/layout/Header'
+import { useInferenceBenchmark } from '../hooks/useInferenceBenchmark'
 import { PROFILES } from '../config/profiles'
 import { colors, pagePadding } from '../config/theme'
 import { useHorizontalSwipe } from '../hooks/useHorizontalSwipe'
@@ -53,6 +55,7 @@ export function HomeScreen() {
   }, [])
 
   const profile = PROFILES[selectedIdx]
+  const benchmark = useInferenceBenchmark()
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -72,6 +75,12 @@ export function HomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <InferenceBenchmarkBanner
+          status={benchmark.status}
+          results={benchmark.results}
+          error={benchmark.error}
+        />
+
         <View style={styles.pageHeader}>
           <Text style={styles.sectionLabel}>Демо рекомендаций</Text>
           <Text style={styles.pageTitle}>Подберите продукты для клиента</Text>
@@ -144,4 +153,5 @@ const styles = StyleSheet.create({
     gap: 16,
     marginTop: 24,
   },
+
 })

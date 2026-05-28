@@ -42,6 +42,10 @@ export function getModelInitError(): string | null {
   return initError
 }
 
+export function getInferenceBackend(): InferenceBackend | null {
+  return inferenceBackend
+}
+
 async function initNativeModel(): Promise<boolean> {
   if (!isCatboostNativeAvailable()) return false
   const asset = Asset.fromModule(cbmModule)

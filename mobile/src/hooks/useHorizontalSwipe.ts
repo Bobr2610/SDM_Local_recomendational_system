@@ -18,7 +18,7 @@ export function useHorizontalSwipe(onSwipeLeft: () => void, onSwipeRight: () => 
   onSwipeRightRef.current = onSwipeRight
 
   return PanResponder.create({
-    onStartShouldSetPanResponder: () => enabled,
+    onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: (_, g) => {
       if (!enabled) return false
       return Math.abs(g.dx) > DRAG_ACTIVATE_PX && Math.abs(g.dx) > Math.abs(g.dy) * 0.8
