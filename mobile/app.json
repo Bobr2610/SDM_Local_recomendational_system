@@ -10,8 +10,7 @@
       "supportsTablet": true
     },
     "plugins": [
-      "./plugins/withCatBoostAndroid",
-      "sdm-catboost"
+      "./plugins/withCatBoostAndroid"
     ],
     "android": {
       "adaptiveIcon": {
