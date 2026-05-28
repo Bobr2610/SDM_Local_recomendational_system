@@ -7,11 +7,11 @@
 
 ```
 ┌─────────────┐     train     ┌──────────────┐
-│  Сервер     │──────────────→│ BitNet b1.58 │
-│  (Python)   │               │  Recommender │
+│  Сервер     │──────────────→│ CatBoost     │
+│  (Python)   │               │  pointwise   │
 │             │               └──────┬───────┘
 │ Santander   │                      │
-│ Bank Churn  │               export │ .gguf / .onnx
+│ Bank Churn  │               export │ catboost_mobile.json
 │ Credit Card │                      │
 │ UCI Market  │                      ▼
 └─────────────┘     копия     ┌──────────────┐
@@ -26,9 +26,8 @@
                              │  Телефон     │
                              │  (Android)   │
                              │              │
-                             │  bitnet.cpp  │
-                             │  локальный   │
-                             │  инференс    │
+                             │  JS surrogate│
+                             │  (offline)   │
                              │              │
                              │  + персона-  │
                              │  лизация по  │
@@ -46,29 +45,23 @@ SDM/
 │   │   │   ├── ad-products.json   # ⭐ Все продукты + реклама (один файл!)
 │   │   │   └── productParser.ts   # Парсер JSON → React
 │   │   ├── services/              # Клиентский ML-инференс
-│   │   │   ├── modelInference.ts  # JS-предиктор (BitNet эвристика)
+│   │   │   ├── modelInference.ts  # CatBoost surrogate (offline)
 │   │   │   └── modelLoader.ts     # ONNX-runtime загрузчик
 │   │   ├── components/            # UI компоненты
 │   │   ├── pages/                 # Страницы
 │   │   └── store/                 # Zustand
-│   └── public/model/              # Модель для телефона (GGUF/ONNX)
+│   └── public/model/              # catboost_mobile.json (офлайн на телефоне)
 │
 ├── backend/                       # ML-пайплайн (Python)
+│   ├── models/export/             # catboost_pointwise_holdout.pkl
 │   ├── src/
-│   │   ├── models/
-│   │   │   ├── bitnet.py          # BitNet b1.58 архитектура
-│   │   │   ├── train.py           # Обучение на Santander
-│   │   │   └── export/
-│   │   │       ├── onnx_export.py # → ONNX
-│   │   │       └── gguf_export.py # → GGUF (bitnet.cpp)
-│   │   ├── pipeline/              # Данные: загрузка, синтетика, фичи
-│   │   ├── evaluation/            # Precision@k, NDCG@k, CTR, Business Value
-│   │   └── edge/                  # Edge runtime
-│   │       ├── runtime/           # Эмулятор телефона + Kotlin-спецификация
-│   │       └── personalization/   # Локальное дообучение на кликах
+│   │   ├── models/                # catboost_pointwise.py
+│   │   ├── pipeline/              # Данные: загрузка, фичи
+│   │   ├── evaluation/            # Метрики
+│   │   └── api/                   # FastAPI
 │   └── scripts/
-│       ├── export_to_frontend.py  # Копирует модель в frontend/public/model/
-│       └── export_to_android.py   # Копирует модель в backend/edge/android_assets/
+│       ├── train_catboost_pointwise.py
+│       └── export_catboost_mobile.py
 │
 ├── docker-compose.yml             # Docker: frontend + backend + train
 └── Readme.md
@@ -92,13 +85,16 @@ npm run dev -- --host
 **Датасет:** `backend/datasets/raw/train_wide_with_lags.csv`  
 **Подготовка данных (ноутбуки на main):** `datasets/00_clean_dataset.ipynb`, `01_generate_income_from_cleaned.ipynb` — если CSV уже готов, пропустите.
 
+**Colab (обучение):** [ноутбук pointwise](https://colab.research.google.com/drive/18Egarg7p1_BW2NujhQFGHbwUW6U1XI4y) → сохраните `.pkl` в `backend/models/export/catboost_pointwise_holdout.pkl`
+
 ```bash
 pip install -r backend/requirements.txt
-python backend/scripts/run_full_pipeline.py --sample-frac 0.25 --epochs 12
+python backend/scripts/run_full_pipeline.py --sample-frac 0.25 --iterations 1200
 # или по шагам:
-python backend/scripts/train_santander.py
-python backend/scripts/export_model.py
-cd frontend && npm run build && npm run model:verify
+python backend/scripts/train_catboost_pointwise.py
+python backend/scripts/export_catboost_mobile.py
+node scripts/verify-model.mjs
+cd frontend && npm run build
 ```
 
 Телефон (Expo): `phone.bat` — API на ПК + модель в `mobile/assets/model` + установка APK.
@@ -107,13 +103,12 @@ cd frontend && npm run build && npm run model:verify
 ### Проверка модели
 
 ```bash
+cd backend
 python -c "
-from src.models.bitnet import BitNetRecommender
-import torch
-m = BitNetRecommender()
-x = torch.randn(1, 32)
-print(f'Output: {m(x).shape}')  # [1, 36]
-print(m.export_info())
+from src.models.catboost_pointwise import get_recommender, UserContext
+r = get_recommender()
+ctx = UserContext.from_api(age=30, balance=250000, monthly_income=85000)
+print(r.rank_products(ctx, top_k=5))
 "
 ```
 
@@ -131,14 +126,10 @@ print(m.export_info())
 
 Поменял JSON → изменился весь сайт.
 
-## BitNet b1.58
+## CatBoost pointwise
 
-Модель использует архитектуру Microsoft BitNet:
-- **Веса:** {-1, 0, +1} — 1.58 бита на параметр
-- **Активации:** int8
-- **Нормализация:** RMSNorm
-- **MLP:** SwiGLU
-- **Размер:** ~100 KB для рекомендательной модели
+- **Сервер:** `catboost_pointwise_holdout.pkl` — полный инференс
+- **Телефон:** `catboost_mobile.json` — компактный surrogate (~6 KB), офлайн в APK
 
 ## Телефон (Expo + сервер на ПК)
 

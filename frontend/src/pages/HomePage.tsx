@@ -21,6 +21,11 @@ export function HomePage() {
       setField('accountType', p.accountType)
       setField('currency', p.currency)
       setField('fullName', p.name)
+      setField('sex', p.sex)
+      setField('seniorityMonths', p.seniorityMonths)
+      setField('isNewCustomer', p.isNewCustomer)
+      setField('segment', p.segment)
+      setField('regionName', p.regionName)
       setSelectedIdx(idx)
     },
     [setField]

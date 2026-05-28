@@ -77,6 +77,6 @@ print(f"""
    unzip santander-product-recommendation.zip -d {DATASET_DIR}
 
 После этого запусти:
-    python backend/scripts/train_santander.py
+    python backend/scripts/train_catboost_pointwise.py
 ========================================
 """)

@@ -7,12 +7,12 @@ import {
   type AdProduct,
 } from '../data/productParser'
 import {
-  extractFeatures,
-  initBitNet,
+  initModel,
   personalize,
   predict,
   getTopKUniqueProductIds,
 } from '../services/modelInference'
+import { profileToUserFeatures, type ProfileForModel } from '../utils/profileToModel'
 import { getItem, setItem } from '../utils/storage'
 
 export type Currency = 'RUB' | 'USD' | 'EUR' | 'CNY'
@@ -25,6 +25,11 @@ export interface UserProfile {
   balance: number
   monthlyIncome: number
   accountType: AccountType
+  sex: 0 | 1
+  seniorityMonths: number
+  isNewCustomer: 0 | 1
+  segment: ProfileForModel['segment']
+  regionName: string
 }
 
 interface UserInputState extends UserProfile {
@@ -35,8 +40,6 @@ interface UserInputState extends UserProfile {
   hydrate: () => Promise<void>
 }
 
-const CURRENCY_MAP: Record<string, number> = { RUB: 0, USD: 1, EUR: 2, CNY: 3 }
-const ACCOUNT_MAP: Record<string, number> = { current: 0, savings: 1, deposit: 2, card: 3 }
 const CLICK_KEY = 'sdm_click_history'
 
 export const useUserInputStore = create<UserInputState>((set, get) => ({
@@ -46,6 +49,11 @@ export const useUserInputStore = create<UserInputState>((set, get) => ({
   balance: 250000,
   monthlyIncome: 85000,
   accountType: 'current',
+  sex: 1,
+  seniorityMonths: 72,
+  isNewCustomer: 0,
+  segment: 'INDIVIDUALS',
+  regionName: 'MADRID',
   sessionId: `${Date.now()}`,
   clickHistory: {},
 
@@ -76,26 +84,12 @@ export const useUserInputStore = create<UserInputState>((set, get) => ({
   },
 }))
 
-export async function fetchRecommendationsForProfile(profile: {
-  age: number
-  balance: number
-  monthlyIncome: number
-  accountType: AccountType
-  currency: Currency
-}): Promise<AdProduct[]> {
+export async function fetchRecommendationsForProfile(profile: ProfileForModel): Promise<AdProduct[]> {
   const clickHistory = useUserInputStore.getState().clickHistory
-  await initBitNet()
+  await initModel()
 
-  const features = extractFeatures({
-    age: profile.age,
-    balance: profile.balance,
-    monthlyIncome: profile.monthlyIncome,
-    accountType: ACCOUNT_MAP[profile.accountType] ?? 0,
-    currency: CURRENCY_MAP[profile.currency] ?? 0,
-    clicks: clickHistory,
-  })
-
-  const scores = predict(features)
+  const userFeatures = profileToUserFeatures(profile, clickHistory)
+  const scores = predict(userFeatures)
   const personalized = personalize(scores, clickHistory)
   const topIds = getTopKUniqueProductIds(personalized, 5)
   const resolved = topIds

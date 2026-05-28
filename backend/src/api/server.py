@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 ROOT = Path(__file__).resolve().parents[3]
+BACKEND = ROOT / "backend"
+if str(BACKEND) not in sys.path:
+    sys.path.insert(0, str(BACKEND))
+
 PRODUCTS_JSON = ROOT / "frontend" / "src" / "data" / "ad-products.json"
+
+_recommender = None
+
+
+def _get_recommender():
+    global _recommender
+    if _recommender is None:
+        from src.models.catboost_pointwise import get_recommender
+
+        _recommender = get_recommender()
+    return _recommender
+
+
+def _product_by_id(product_id: str) -> dict[str, Any] | None:
+    for p in _load_products():
+        if p["id"] == product_id:
+            return p
+    return None
 
 MOCK_USER: dict[str, Any] = {
     "id": "user-001",
@@ -78,7 +101,7 @@ def _load_products() -> list[dict[str, Any]]:
     if _products_cache is not None:
         return _products_cache
 
-    raw = json.loads(PRODUCTS_JSON.read_text(encoding="utf-8"))
+    raw = json.loads(PRODUCTS_JSON.read_text(encoding="utf-8-sig"))
     items: list[dict[str, Any]] = []
     for category, group in raw.items():
         for p in group:
@@ -115,7 +138,8 @@ def _pick_ad(age: int, balance: float) -> tuple[int, str]:
 
 
 MODEL_DIR = ROOT / "frontend" / "public" / "model"
-REQUIRED_MODEL_FILES = ("bitnet_weights.json", "feature_order.json")
+REQUIRED_MODEL_FILES = ("catboost_mobile.json", "feature_order.json")
+CATBOOST_PKL = BACKEND / "models" / "export" / "catboost_pointwise_holdout.pkl"
 
 
 @app.get("/api/health")
@@ -141,16 +165,18 @@ def model_health() -> dict[str, Any]:
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
+    pkl_ok = CATBOOST_PKL.exists()
     return {
-        "status": "ok" if not missing else "incomplete",
-        "inference_on_phone": "bitnet_js_weights (bundled in APK, offline)",
-        "inference_on_server": "rules_api_only",
+        "status": "ok" if not missing and pkl_ok else "incomplete",
+        "inference_on_phone": "catboost_logistic_surrogate (bundled in APK, offline)",
+        "inference_on_server": "catboost_pointwise.pkl",
+        "catboost_pkl": {"path": str(CATBOOST_PKL.relative_to(ROOT)).replace("\\", "/"), "ok": pkl_ok},
         "model_dir": str(MODEL_DIR.relative_to(ROOT)).replace("\\", "/"),
         "required": list(REQUIRED_MODEL_FILES),
         "missing": missing,
         "files": files,
         "manifest": manifest,
-        "train_hint": "python backend/scripts/train_santander.py && python backend/scripts/export_model.py",
+        "train_hint": "python backend/scripts/train_catboost_pointwise.py && python backend/scripts/export_catboost_mobile.py",
     }
 
 
@@ -223,7 +249,39 @@ def products(category: str | None = None) -> list[dict[str, Any]]:
 
 
 @app.get("/api/products/recommendations")
-def product_recommendations() -> list[dict[str, Any]]:
+def product_recommendations(
+    age: int = 35,
+    balance: float = 250_000,
+    monthly_income: float = 85_000,
+    sex: int | None = None,
+    seniority_months: float | None = None,
+    is_new_customer: int | None = None,
+    segment: str | None = None,
+    region_name: str | None = None,
+) -> list[dict[str, Any]]:
+    try:
+        from src.models.catboost_pointwise import UserContext
+
+        ctx = UserContext.from_api(
+            age=age,
+            balance=balance,
+            monthly_income=monthly_income,
+            sex=sex,
+            seniority_months=seniority_months,
+            is_new_customer=is_new_customer,
+            segment=segment,
+            region_name=region_name,
+        )
+        ranked = _get_recommender().rank_products(ctx, top_k=5)
+        out: list[dict[str, Any]] = []
+        for pid, score in ranked:
+            p = _product_by_id(pid)
+            if p:
+                out.append({**p, "score": round(score, 4)})
+        if out:
+            return out
+    except Exception:
+        pass
     items = _load_products()
     return random.sample(items, k=min(5, len(items)))
 
@@ -233,6 +291,46 @@ async def ads_select(request: Request) -> dict[str, Any]:
     body = await request.json()
     age = int(body.get("age", 30))
     balance = float(body.get("balance", 100000))
+    monthly_income = float(body.get("monthlyIncome", body.get("monthly_income", balance * 0.3)))
+    click_history = body.get("clickHistory") or body.get("clicks") or {}
+    sex = body.get("sex")
+    seniority_months = body.get("seniorityMonths", body.get("seniority_months"))
+    is_new_customer = body.get("isNewCustomer", body.get("is_new_customer"))
+    segment = body.get("segment")
+    region_name = body.get("regionName", body.get("region_name"))
+
+    try:
+        from src.models.catboost_pointwise import UserContext
+
+        ctx = UserContext.from_api(
+            age=age,
+            balance=balance,
+            monthly_income=monthly_income,
+            click_history=click_history if isinstance(click_history, dict) else {},
+            sex=sex if sex is not None else None,
+            seniority_months=float(seniority_months) if seniority_months is not None else None,
+            is_new_customer=int(is_new_customer) if is_new_customer is not None else None,
+            segment=str(segment) if segment else None,
+            region_name=str(region_name) if region_name else None,
+        )
+        ranked = _get_recommender().rank_products(
+            ctx, top_k=1, click_boost=click_history if isinstance(click_history, dict) else None
+        )
+        if ranked:
+            pid, score = ranked[0]
+            product = _product_by_id(pid)
+            if product:
+                return {
+                    "adId": product["id"],
+                    "title": product["name"],
+                    "subtitle": (product["description"][:80] + "...") if len(product["description"]) > 80 else product["description"],
+                    "link": f"/product/{product['id']}",
+                    "reason": "CatBoost: оптимально под ваш профиль",
+                    "confidence": round(float(score), 3),
+                }
+    except Exception:
+        pass
+
     ad_idx, reason = _pick_ad(age, balance)
     template = AD_TEMPLATES[ad_idx]
     return {

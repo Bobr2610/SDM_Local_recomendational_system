@@ -4,7 +4,9 @@ import { colors, formatRubles } from '../../../config/theme'
 import { PORTRAITS } from '../../../config/portraits'
 import { GraduationIcon, BriefcaseIcon, RocketIcon, BuildingIcon } from '../../ui/Icons'
 
-export interface ProfileData {
+import type { ModelProfileFields } from '../../../utils/profileToModel'
+
+export interface ProfileData extends ModelProfileFields {
   name: string
   age: number
   balance: number
@@ -26,6 +28,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 15000,
     accountType: 'card',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 6,
+    isNewCustomer: 1,
+    segment: 'STUDENTS',
+    regionName: 'MADRID',
     info: 'Студент',
     avatar: PORTRAITS.matvey,
     avatarBg: 'linear-gradient(135deg, oklch(92% 0.06 250) 0%, oklch(86% 0.08 264) 100%)',
@@ -44,6 +51,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 120000,
     accountType: 'current',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 72,
+    isNewCustomer: 0,
+    segment: 'INDIVIDUALS',
+    regionName: 'MADRID',
     info: 'Менеджер',
     avatar: PORTRAITS.artem,
     avatarBg: 'linear-gradient(135deg, oklch(94% 0.05 295) 0%, oklch(88% 0.08 295) 100%)',
@@ -62,6 +74,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 350000,
     accountType: 'savings',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 48,
+    isNewCustomer: 0,
+    segment: 'VIP',
+    regionName: 'BARCELONA',
     info: 'Предприниматель',
     avatar: PORTRAITS.danya,
     avatarBg: 'linear-gradient(135deg, oklch(96% 0.05 55) 0%, oklch(90% 0.09 45) 100%)',
@@ -80,6 +97,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 5000000,
     accountType: 'deposit',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 180,
+    isNewCustomer: 0,
+    segment: 'VIP',
+    regionName: 'VALENCIA',
     info: 'Топ-менеджер',
     avatar: PORTRAITS.mikhail,
     avatarBg: 'linear-gradient(135deg, oklch(93% 0.04 160) 0%, oklch(86% 0.08 160) 100%)',

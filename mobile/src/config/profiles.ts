@@ -1,8 +1,9 @@
 import { PORTRAITS } from './portraits'
 import type { AccountType, Currency } from '../store/userInputStore'
 import { colors } from './theme'
+import type { ModelProfileFields } from '../utils/profileToModel'
 
-export interface ProfileData {
+export interface ProfileData extends ModelProfileFields {
   name: string
   age: number
   balance: number
@@ -24,6 +25,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 15000,
     accountType: 'card',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 6,
+    isNewCustomer: 1,
+    segment: 'STUDENTS',
+    regionName: 'MADRID',
     info: 'Студент',
     avatar: PORTRAITS.matvey,
     avatarBg: ['#e8ecf8', '#d4dcf0'],
@@ -42,6 +48,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 120000,
     accountType: 'current',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 72,
+    isNewCustomer: 0,
+    segment: 'INDIVIDUALS',
+    regionName: 'MADRID',
     info: 'Менеджер',
     avatar: PORTRAITS.artem,
     avatarBg: ['#f0e8f8', '#e0d4f0'],
@@ -60,6 +71,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 350000,
     accountType: 'savings',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 48,
+    isNewCustomer: 0,
+    segment: 'VIP',
+    regionName: 'BARCELONA',
     info: 'Предприниматель',
     avatar: PORTRAITS.danya,
     avatarBg: ['#fff4e6', '#fce8d4'],
@@ -78,6 +94,11 @@ export const PROFILES: ProfileData[] = [
     monthlyIncome: 5000000,
     accountType: 'deposit',
     currency: 'RUB',
+    sex: 1,
+    seniorityMonths: 180,
+    isNewCustomer: 0,
+    segment: 'VIP',
+    regionName: 'VALENCIA',
     info: 'Топ-менеджер',
     avatar: PORTRAITS.mikhail,
     avatarBg: ['#e8f8ef', '#d4efe0'],

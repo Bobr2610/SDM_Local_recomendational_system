@@ -24,7 +24,7 @@ const expoGo = args.has('--expo-go')
 const serverOnly = args.has('--server-only')
 const noInstall = args.has('--no-install')
 
-const MODEL_REQUIRED = ['bitnet_weights.json', 'feature_order.json']
+const MODEL_REQUIRED = ['catboost_mobile.json', 'feature_order.json']
 
 function log(msg) {
   console.log(`\n▶ ${msg}`)
@@ -184,7 +184,7 @@ async function main() {
 
   if (expoGo) {
     log('Expo Go: установите «Expo Go» из Play Store, отсканируйте QR.')
-    log('Модель BitNet уже в bundle (mobile/assets/model).')
+    log('Модель CatBoost уже в bundle (mobile/assets/model).')
     run('npx', ['expo', 'start', '--lan'], {
       cwd: mobile,
       env: { EXPO_PUBLIC_API_BASE_URL: `http://${ip}:8000/api` },

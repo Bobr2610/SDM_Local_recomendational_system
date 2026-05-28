@@ -6,13 +6,13 @@ import { ANALYTICS } from '../config/features'
 import { generateSessionId } from '../utils/session'
 import { getItem, setItem } from '../utils/storage'
 import {
-  extractFeatures,
   predict,
-  initBitNet,
+  initModel,
   personalize,
   getTopK,
   getProductId,
 } from '../services/modelInference'
+import { profileToUserFeatures, type Segment } from '../utils/profileToModel'
 import { getAllProducts } from '../data/productParser'
 
 export type Currency = 'RUB' | 'USD' | 'EUR' | 'CNY'
@@ -25,11 +25,11 @@ export interface UserProfile {
   balance: number
   monthlyIncome: number
   accountType: AccountType
-  seniorityMonths?: number
-  isNewCustomer?: number
-  sex?: number
-  segmentVip?: number
-  segmentStudent?: number
+  sex: 0 | 1
+  seniorityMonths: number
+  isNewCustomer: 0 | 1
+  segment: Segment
+  regionName: string
 }
 
 interface UserInputState extends UserProfile {
@@ -53,10 +53,12 @@ const DEFAULTS: UserProfile = {
   balance: 250000,
   monthlyIncome: 85000,
   accountType: 'current',
+  sex: 1,
+  seniorityMonths: 72,
+  isNewCustomer: 0,
+  segment: 'INDIVIDUALS',
+  regionName: 'MADRID',
 }
-
-const CURRENCY_MAP: Record<string, number> = { RUB: 0, USD: 1, EUR: 2, CNY: 3 }
-const ACCOUNT_MAP: Record<string, number> = { current: 0, savings: 1, deposit: 2, card: 3 }
 
 const REASONS = [
   'AI: оптимально под ваш профиль',
@@ -137,30 +139,33 @@ export const useUserInputStore = create<UserInputState>((set, get) => ({
   },
 
   fetchAd: async () => {
-    const { age, balance, monthlyIncome, accountType, currency, clickHistory, sessionId, seniorityMonths, isNewCustomer, sex, segmentVip, segmentStudent } = get()
+    const state = get()
+    const { age, balance, monthlyIncome, accountType, currency, clickHistory, sessionId } = state
     set({ isLoading: true, error: null })
 
     try {
       let adResponse: AdSelectionResponse
 
       if (API_CONFIG.USE_LOCAL_MODEL) {
-        await initBitNet()
+        await initModel()
 
-        const features = extractFeatures({
-          age,
-          balance,
-          monthlyIncome,
-          accountType: ACCOUNT_MAP[accountType] ?? 0,
-          currency: CURRENCY_MAP[currency] ?? 0,
-          clicks: clickHistory,
-          seniorityMonths,
-          isNewCustomer,
-          sex,
-          segmentVip,
-          segmentStudent,
-        })
+        const userFeatures = profileToUserFeatures(
+          {
+            age,
+            balance,
+            monthlyIncome,
+            accountType,
+            currency,
+            sex: state.sex,
+            seniorityMonths: state.seniorityMonths,
+            isNewCustomer: state.isNewCustomer,
+            segment: state.segment,
+            regionName: state.regionName,
+          },
+          clickHistory,
+        )
 
-        const scores = predict(features)
+        const scores = predict(userFeatures)
         const personalized = personalize(scores, clickHistory)
         const topIdx = getTopK(personalized, 1)[0]
 
@@ -177,7 +182,20 @@ export const useUserInputStore = create<UserInputState>((set, get) => ({
           confidence: 0.7 + Math.random() * 0.2,
         }
       } else {
-        const response = await adsApi.select({ age, balance, sessionId })
+        const response = await adsApi.select({
+          age,
+          balance,
+          monthlyIncome,
+          sessionId,
+          sex: state.sex,
+          seniorityMonths: state.seniorityMonths,
+          isNewCustomer: state.isNewCustomer,
+          segment: state.segment,
+          regionName: state.regionName,
+          accountType,
+          currency,
+          clickHistory,
+        })
         if (response.error) throw new Error(response.error)
         adResponse = response.data
       }

@@ -1,13 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { AdProduct } from '../../../data/productParser'
-import {
-  extractFeatures,
-  predict,
-  initBitNet,
-  personalize,
-  getTopKUniqueProductIds,
-} from '../../../services/modelInference'
+import { initModel, personalize, predict, getTopKUniqueProductIds } from '../../../services/modelInference'
+import { profileToUserFeatures } from '../../../utils/profileToModel'
 import { getAllProducts, getHomeAdProducts, getProductById } from '../../../data/productParser'
 import { colors } from '../../../config/theme'
 import { CategoryGlyph } from '../../ui/CategoryIcon'
@@ -110,24 +105,9 @@ function useRecommendations(profile: ProfileData | null, mode: 'profile' | 'popu
     }
     if (!profile) return []
 
-    const CURRENCY_MAP: Record<string, number> = { RUB: 0, USD: 1, EUR: 2, CNY: 3 }
-    const ACCOUNT_MAP: Record<string, number> = { current: 0, savings: 1, deposit: 2, card: 3 }
-
-    void initBitNet()
-    const features = extractFeatures({
-      age: profile.age,
-      balance: profile.balance,
-      monthlyIncome: profile.monthlyIncome,
-      accountType: ACCOUNT_MAP[profile.accountType] ?? 0,
-      currency: CURRENCY_MAP[profile.currency] ?? 0,
-      clicks: clickHistory,
-      seniorityMonths: (profile as any).seniorityMonths,
-      isNewCustomer: (profile as any).isNewCustomer,
-      sex: (profile as any).sex,
-      segmentVip: (profile as any).segmentVip,
-      segmentStudent: (profile as any).segmentStudent,
-    })
-    const scores = predict(features)
+    void initModel()
+    const userFeatures = profileToUserFeatures(profile, clickHistory)
+    const scores = predict(userFeatures)
     const personalized = personalize(scores, clickHistory)
     const topIds = getTopKUniqueProductIds(personalized, 5)
     const resolved = topIds

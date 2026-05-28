@@ -46,7 +46,7 @@ async function createOnnxSession(): Promise<{
   run: (feats: Float32Array) => Promise<Float32Array>
 } | null> {
   try {
-    const modelPath = modelAssetUrl('model/bitnet_recommender.onnx')
+    const modelPath = modelAssetUrl('model/catboost_recommender.onnx')
     const resp = await fetch(modelPath, { method: 'HEAD' })
     if (!resp.ok) return null
 

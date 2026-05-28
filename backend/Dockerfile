@@ -13,10 +13,8 @@ COPY backend/ backend/
 WORKDIR /app/backend
 
 RUN python -c "\
-from src.models.bitnet import BitNetRecommender; \
-from src.pipeline.loaders.santander import load_santander; \
-from src.evaluation.metrics import precision_at_k, ndcg_at_k; \
-from src.edge.runtime.inference import EdgeRuntime; \
+from src.models.catboost_pointwise import get_recommender; \
+from src.pipeline.loaders.custom_wide import load_custom_wide; \
 print('All imports OK')"
 
 CMD ["python", "-c", "print('Backend ready'); import time; time.sleep(99999)"]
