@@ -121,5 +121,5 @@
     "segment",
     "product"
   ],
-  "source_pkl": "catboost_pointwise_holdout_old_good.pkl"
+  "source_pkl": "backend/models/export/catboost_pointwise_holdout.pkl"
 }

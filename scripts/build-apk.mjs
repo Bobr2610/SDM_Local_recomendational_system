@@ -136,7 +136,7 @@ function main() {
 
   log(`JAVA_HOME=${javaHome}`)
   log('Экспорт модели…')
-  run(pythonCmd, [join(root, 'backend', 'scripts', 'export_model.py')], { env })
+  run(pythonCmd, [join(root, 'backend', 'scripts', 'pipeline', 'export_model.py')], { env })
 
   log('Сборка APK (JS bundle вшивается в debug)…')
   run(isWin ? 'gradlew.bat' : './gradlew', ['--stop'], { cwd: android, env })

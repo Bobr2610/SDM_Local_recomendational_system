@@ -54,3 +54,11 @@ export const colors = {
 export function formatRubles(n: number): string {
   return `${Math.round(n).toLocaleString('ru-RU')} ₽`
 }
+
+export function formatEuroYear(n: number): string {
+  return `${Math.round(n).toLocaleString('ru-RU')} EUR/год`
+}
+
+export function formatEuro(n: number): string {
+  return `${Math.round(n).toLocaleString('ru-RU')} EUR`
+}

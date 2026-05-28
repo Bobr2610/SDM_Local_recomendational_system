@@ -2,7 +2,7 @@ import { Image, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import type { ProfileData } from '../config/profiles'
 import { getTraitGlyph } from '../config/traitGlyphs'
-import { colors, formatRubles, shadows } from '../config/theme'
+import { colors, formatEuro, formatEuroYear, shadows } from '../config/theme'
 import { GlyphWallet } from './ui/BankGlyphs'
 import { GlyphBadge } from './ui/GlyphBadge'
 
@@ -33,8 +33,9 @@ export function ClientProfile({ profile }: { profile: ProfileData }) {
             <GlyphWallet size={20} color={INCOME_TONE.fg} />
           </GlyphBadge>
           <View style={styles.incomeText}>
-            <Text style={styles.incomeLabel}>Ежемесячный доход</Text>
-            <Text style={styles.incomeValue}>{formatRubles(profile.monthlyIncome)}</Text>
+            <Text style={styles.incomeLabel}>Годовой доход</Text>
+            <Text style={styles.incomeValue}>{formatEuroYear(profile.modelIncomeEurYear)}</Text>
+            <Text style={styles.balanceValue}>Оценка остатка: {formatEuro(profile.balance)}</Text>
           </View>
         </View>
 
@@ -145,6 +146,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginTop: 2,
     color: colors.text.primary,
+  },
+  balanceValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
+    color: colors.text.secondary,
   },
   desc: {
     fontSize: 14,

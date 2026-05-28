@@ -51,13 +51,8 @@ DATA_CANDIDATES = [
     ROOT / "backend" / "datasets" / "raw" / "train_wide_new.csv",
     ROOT / "backend" / "datasets" / "raw" / "train_wide.csv",
 ]
-TARGETS = [15_000, 100_000, 500_000, 5_000_000]
-# Purchasing-power / market-calibration coefficient for mapping the European
-# model income distribution onto a Russian demo income scale. This is not an
-# official EUR/RUB FX rate and must not be used for accounting conversion.
-START_EUR_TO_RUB_CALIBRATED = 20.0
-EUR_TO_RUB_CALIBRATED = 12.0
-CALIBRATION_CANDIDATES = [4.0, 8.0, 12.0, 15.0, 20.0, 25.0, 30.0]
+SAMPLE_QUANTILES = [0.01, 0.20, 0.70, 0.99]
+PROFILE_NAMES = ["Матвей", "Артем", "Даниил", "Михаил"]
 MODEL_INCOME_UNIT = "EUR/year"
 OUT_TS = ROOT / "frontend" / "src" / "features" / "profiles" / "demoProfiles.generated.ts"
 OUT_JSON = ROOT / "backend" / "datasets" / "processed" / "demo_profiles.json"
@@ -77,51 +72,6 @@ def infer_segment_label(segment: str) -> str:
         "VIP": "Премиум",
         "INDIVIDUALS": "Частный клиент",
     }.get(segment, "Клиент банка")
-
-
-def model_income_to_monthly_rub(model_income_eur_year: float, coefficient: float = EUR_TO_RUB_CALIBRATED) -> float:
-    if MODEL_INCOME_UNIT != "EUR/year":
-        raise ValueError(f"Unsupported model income unit: {MODEL_INCOME_UNIT}")
-    return model_income_eur_year * coefficient / 12.0
-
-
-def calibration_report(model_income_eur_year: pd.Series) -> tuple[list[dict], dict]:
-    percentiles = {
-        "p05": 0.05,
-        "p25": 0.25,
-        "p50": 0.50,
-        "p75": 0.75,
-        "p90": 0.90,
-        "p95": 0.95,
-        "p99": 0.99,
-    }
-    reports = []
-    for coefficient in CALIBRATION_CANDIDATES:
-        monthly = model_income_eur_year * coefficient / 12.0
-        reports.append(
-            {
-                "coefficient": coefficient,
-                "quantilesRubMonth": {
-                    label: int(round(float(monthly.quantile(q)))) for label, q in percentiles.items()
-                },
-                "targetQuantiles": {
-                    str(target): round(float((monthly <= target).mean()), 4) for target in TARGETS
-                },
-            }
-        )
-
-    selected = next(item for item in reports if item["coefficient"] == EUR_TO_RUB_CALIBRATED)
-    summary = {
-        "selectedCoefficient": EUR_TO_RUB_CALIBRATED,
-        "selectionReason": (
-            "Coefficient 12 places 100k RUB/month near the median, 500k RUB/month near p99, "
-            "and 5M RUB/month in the extreme upper tail. Starting coefficient 20 made the "
-            "distribution too high for the Russian demo scale."
-        ),
-        "startCoefficient": START_EUR_TO_RUB_CALIBRATED,
-        "selectedReport": selected,
-    }
-    return reports, summary
 
 
 def pick_icon_tags(segment: str, income: float, owned: list[str]) -> list[str]:
@@ -154,9 +104,8 @@ def balance_proxy(row: pd.Series) -> tuple[float, str]:
     return float(row["income_filled"]) * 0.35, "income_share_proxy"
 
 
-def build_profile(row: pd.Series, target_income: int, monthly_distribution_rub: pd.Series) -> dict:
+def build_profile(row: pd.Series, target_quantile: float, profile_name: str, income_distribution: pd.Series) -> dict:
     model_income_eur_year = float(row["income_filled"])
-    monthly_income_rub = model_income_to_monthly_rub(model_income_eur_year)
     balance, balance_source = balance_proxy(row)
     owned = [product for product in PRODUCTS if product in row.index and float(row[product]) > 0]
     sex_raw = str(row["sex"])
@@ -165,24 +114,26 @@ def build_profile(row: pd.Series, target_income: int, monthly_distribution_rub: 
     age = int(round(float(row["age"])))
     seniority = int(round(float(row["seniority_months"])))
     is_new = int(round(float(row["is_new_customer"])))
-    quantile = float((monthly_distribution_rub <= monthly_income_rub).mean())
-    selection_delta = abs(monthly_income_rub - target_income)
+    quantile = float((income_distribution <= model_income_eur_year).mean())
+    target_income_eur_year = float(income_distribution.quantile(target_quantile))
+    selection_delta = abs(model_income_eur_year - target_income_eur_year)
+    quantile_label = int(round(target_quantile * 100))
     return {
         "id": f"user-{int(row['user_id'])}",
-        "name": f"Клиент {target_income // 1000}k",
+        "name": profile_name,
         "sourceUserId": int(row["user_id"]),
-        "targetMonthlyIncomeRub": target_income,
+        "targetIncomeQuantile": target_quantile,
+        "targetIncomeEurYear": round(target_income_eur_year, 2),
         "modelIncomeEurYear": round(model_income_eur_year, 2),
         "rawIncome": {
             "field": "income_filled",
             "value": round(model_income_eur_year, 2),
             "unit": MODEL_INCOME_UNIT,
         },
-        "monthlyIncomeRub": int(round(monthly_income_rub)),
         "incomeQuantile": round(quantile, 4),
         "selectionReason": (
-            f"Nearest real client to target {target_income:,.0f} RUB/month after calibrated conversion; "
-            f"delta {selection_delta:,.0f} RUB/month."
+            f"Nearest real client to target p{quantile_label:02d} income quantile; "
+            f"delta {selection_delta:,.2f} EUR/year."
         ).replace(",", " "),
         "age": age,
         "balance": round(balance, 2),
@@ -196,8 +147,8 @@ def build_profile(row: pd.Series, target_income: int, monthly_distribution_rub: 
         "ownedProducts": owned,
         "ownedProductFlags": {product: int(product in owned) for product in PRODUCTS},
         "info": infer_segment_label(segment),
-        "description": f"Реальный клиент из датасета, выбранный рядом с уровнем дохода {target_income:,.0f} ₽/мес.".replace(",", " "),
-        "characteristics": pick_icon_tags(segment, monthly_income_rub, owned),
+        "description": f"Реальный клиент из датасета, выбранный рядом с p{quantile_label:02d} дохода.",
+        "characteristics": pick_icon_tags(segment, model_income_eur_year, owned),
     }
 
 
@@ -214,7 +165,7 @@ def public_profile(profile: dict) -> dict:
     public = {
         key: value
         for key, value in profile.items()
-        if key not in {"rawIncome", "selectionReason", "modelIncomeEurYear"}
+        if key not in {"rawIncome", "selectionReason"}
     }
     public["scoringIncome"] = profile["modelIncomeEurYear"]
     return public
@@ -228,27 +179,28 @@ def main() -> None:
     df = pd.read_csv(dataset, usecols=usecols, low_memory=False)
     df = df.dropna(subset=["income_filled", "age", "sex", "seniority_months", "is_new_customer", "segment", "region_name"]).copy()
     model_income_eur_year = df["income_filled"].astype(float)
-    monthly_income_rub = model_income_to_monthly_rub(model_income_eur_year)
-    reports, summary = calibration_report(model_income_eur_year)
 
     profiles = []
-    for target in TARGETS:
-        idx = (monthly_income_rub - target).abs().idxmin()
-        profiles.append(build_profile(df.loc[idx], target, monthly_income_rub))
+    for target_quantile, profile_name in zip(SAMPLE_QUANTILES, PROFILE_NAMES, strict=True):
+        target_income_eur_year = float(model_income_eur_year.quantile(target_quantile))
+        male_df = df[df["sex"].astype(str).str.upper() == "M"]
+        if male_df.empty:
+            raise SystemExit("No male clients found for named demo profiles")
+        male_income = male_df["income_filled"].astype(float)
+        idx = (male_income - target_income_eur_year).abs().idxmin()
+        profiles.append(build_profile(df.loc[idx], target_quantile, profile_name, model_income_eur_year))
     public_profiles = [public_profile(profile) for profile in profiles]
 
-    max_monthly_income = float(monthly_income_rub.max())
     audit = {
         "sourceDataset": str(dataset.relative_to(ROOT)).replace("\\", "/"),
-        "displayCurrency": "RUB/month",
+        "displayCurrency": MODEL_INCOME_UNIT,
         "modelIncomeUnit": MODEL_INCOME_UNIT,
-        "incomeCalibrationCoefficient": EUR_TO_RUB_CALIBRATED,
-        "calibrationKind": "market_adjusted_not_fx_rate",
-        "calibrationSummary": summary,
-        "calibrationReport": reports,
-        "targets": TARGETS,
-        "maxAvailableMonthlyIncomeRub": int(round(max_monthly_income)),
-        "usedUpperTailInsteadOfTarget": max_monthly_income < TARGETS[-1],
+        "sampleQuantiles": SAMPLE_QUANTILES,
+        "incomeQuantileSummary": {
+            f"p{int(q * 100):02d}": round(float(model_income_eur_year.quantile(q)), 2)
+            for q in SAMPLE_QUANTILES
+        },
+        "maxAvailableIncomeEurYear": round(float(model_income_eur_year.max()), 2),
         "profiles": profiles,
     }
 

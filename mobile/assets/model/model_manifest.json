@@ -7,11 +7,11 @@
   "files": {
     "catboost_pointwise.cbm": {
       "bytes": 3519512,
-      "sha256_16": "d8026754e2fcd048",
+      "sha256_16": "8c718c0345ec4744",
       "required": true
     },
     "catboost_model.json": {
-      "bytes": 2655,
+      "bytes": 2792,
       "required": true
     },
     "catboost_model_full.json": {

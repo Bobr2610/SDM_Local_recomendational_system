@@ -17,7 +17,7 @@ export interface ProfileForModel extends ModelProfileFields {
   age: number
   balance: number
   monthlyIncome: number
-  monthlyIncomeRub: number
+  modelIncomeEurYear: number
   scoringIncome: number
   accountType: AccountType
   currency: Currency

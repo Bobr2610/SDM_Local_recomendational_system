@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef } from 'react'
-import { colors, formatRubles } from '../../shared/config/theme'
+import { colors, formatEuroYear } from '../../shared/config/theme'
 import { PORTRAITS } from '../../shared/config/portraits'
 import { DEMO_PROFILES } from './demoProfiles.generated'
 import type { ProfileForModel } from '../../model/profileToModel'
@@ -15,7 +15,8 @@ const GRADIENTS = [
 
 export interface ProfileData extends ProfileForModel {
   sourceUserId: number
-  targetMonthlyIncomeRub: number
+  targetIncomeQuantile: number
+  targetIncomeEurYear: number
   incomeQuantile: number
   balanceSource: string
   sexLabel: string
@@ -31,7 +32,7 @@ export const PROFILES: ProfileData[] = DEMO_PROFILES.map((profile, index) => ({
   ...profile,
   characteristics: [...profile.characteristics],
   ownedProducts: [...profile.ownedProducts],
-  monthlyIncome: profile.monthlyIncomeRub,
+  monthlyIncome: profile.scoringIncome,
   avatar: AVATARS[index] ?? AVATARS[0],
   avatarBg: GRADIENTS[index] ?? GRADIENTS[0],
   accountType: profile.ownedProducts.some((item) => item.startsWith('card-'))
@@ -84,10 +85,10 @@ export function ClientSelector({
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-bold text-[15px] leading-tight tracking-tight truncate" style={{ color: colors.text.primary }}>
-                {formatRubles(profile.monthlyIncomeRub)}
+                {profile.name}
               </div>
               <div className="text-[13px] mt-0.5 leading-snug truncate font-medium" style={{ color: colors.text.secondary }}>
-                {profile.info}, {profile.age} лет
+                {formatEuroYear(profile.modelIncomeEurYear)}
               </div>
               <div className="text-[12px] mt-1 leading-snug font-medium truncate" style={{ color: colors.text.muted }}>
                 квантиль {formatIncomeQuantile(profile.incomeQuantile)}

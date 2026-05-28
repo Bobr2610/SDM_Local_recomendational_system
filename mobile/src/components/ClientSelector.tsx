@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BriefcaseIcon, BuildingIcon, GraduationIcon, RocketIcon } from './ui/Icons'
 import { PROFILES, SELECTOR_THEMES } from '../config/profiles'
-import { colors, formatRubles, shadows } from '../config/theme'
+import { colors, formatEuroYear, shadows } from '../config/theme'
 
 const SELECTOR_ICONS = [GraduationIcon, BriefcaseIcon, RocketIcon, BuildingIcon]
 
@@ -48,7 +48,7 @@ export function ClientSelector({ selectedIdx, onSelect }: Props) {
                 {p.info}, {p.age} лет
               </Text>
               <Text style={styles.income}>
-                Доход {formatRubles(p.monthlyIncome)} / мес.
+                {formatEuroYear(p.modelIncomeEurYear)}
               </Text>
             </View>
             <View style={[styles.radio, active && styles.radioOn]}>

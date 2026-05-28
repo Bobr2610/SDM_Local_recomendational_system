@@ -80,7 +80,7 @@ export function RecommendationsPanel({ profile }: { profile: ProfileData | null 
       </div>
 
       <p className="text-sm mb-4" style={{ color: colors.text.secondary }}>
-        Модель ранжирует 22 candidate products локально в браузере по pointwise-строкам `user × product`. Клики усиливают score мягким controlled boost.
+        Рекомендации пересчитываются локально для выбранного профиля клиента.
       </p>
 
       {error ? (
@@ -113,13 +113,6 @@ export function RecommendationsPanel({ profile }: { profile: ProfileData | null 
             <p className="text-sm mt-3 leading-relaxed" style={{ color: colors.text.secondary }}>
               {item.product.description}
             </p>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs" style={{ color: colors.text.secondary }}>
-              <MetricChip label="score" value={item.score.toFixed(4)} />
-              <MetricChip label="boost" value={item.boost.toFixed(4)} />
-              <MetricChip label="base" value={item.baseScore.toFixed(4)} />
-              <MetricChip label="reason" value="доход, сегмент, активность, продукты" />
-            </div>
           </Link>
         ))}
       </div>
@@ -130,18 +123,5 @@ export function RecommendationsPanel({ profile }: { profile: ProfileData | null 
         </p>
       ) : null}
     </section>
-  )
-}
-
-function MetricChip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl px-3 py-2" style={{ background: colors.primary.bg }}>
-      <div className="text-[10px] uppercase tracking-wider" style={{ color: colors.text.muted }}>
-        {label}
-      </div>
-      <div className="text-xs font-semibold mt-1" style={{ color: colors.text.primary }}>
-        {value}
-      </div>
-    </div>
   )
 }

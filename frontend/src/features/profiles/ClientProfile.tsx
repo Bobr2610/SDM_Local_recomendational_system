@@ -1,5 +1,5 @@
 import { syntheticFromProfile } from '../../model/syntheticFromProfile.generated'
-import { colors, formatRubles } from '../../shared/config/theme'
+import { colors, formatEuro, formatEuroYear } from '../../shared/config/theme'
 import { formatIncomeQuantile, type ProfileData } from './ClientSelector'
 
 function formatPercent(value: number): string {
@@ -8,7 +8,6 @@ function formatPercent(value: number): string {
 
 export function ClientProfile({ profile }: { profile: ProfileData }) {
   const synthetic = syntheticFromProfile(profile.age, profile.monthlyIncome, profile.balance, profile.segment)
-  const ownedProducts = profile.ownedProducts.length > 0 ? profile.ownedProducts.join(', ') : 'нет'
   const balanceLabel = profile.balanceSource.includes('proxy') ? 'Оценка остатка' : 'Остаток'
 
   return (
@@ -18,31 +17,24 @@ export function ClientProfile({ profile }: { profile: ProfileData }) {
           <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover object-center" loading="lazy" decoding="async" />
         </div>
         <h2 className="text-xl font-bold tracking-tight mt-3" style={{ color: colors.text.primary }}>
-          Реальный клиент из датасета
+          {profile.name}
         </h2>
         <p className="text-sm mt-2" style={{ color: colors.text.secondary }}>
-          Доход {formatRubles(profile.monthlyIncomeRub)} • квантиль {formatIncomeQuantile(profile.incomeQuantile)}
+          Доход {formatEuroYear(profile.modelIncomeEurYear)} • квантиль {formatIncomeQuantile(profile.incomeQuantile)}
         </p>
       </div>
 
       <div className="flex flex-col gap-5 p-5">
         <div className="grid grid-cols-2 gap-3">
           <InfoCard label="Возраст" value={`${profile.age} лет`} />
-          <InfoCard label="Доход" value={formatRubles(profile.monthlyIncomeRub)} />
+          <InfoCard label="Доход" value={formatEuroYear(profile.modelIncomeEurYear)} />
           <InfoCard label="Квантиль дохода" value={formatIncomeQuantile(profile.incomeQuantile)} />
-          <InfoCard label={balanceLabel} value={formatRubles(profile.balance)} />
+          <InfoCard label={balanceLabel} value={formatEuro(profile.balance)} />
           <InfoCard label="Стаж" value={`${profile.seniorityMonths} мес.`} />
           <InfoCard label="Сегмент" value={profile.segment} />
           <InfoCard label="Регион" value={profile.regionName} />
           <InfoCard label="Новый клиент" value={profile.isNewCustomer === 1 ? 'Да' : 'Нет'} />
           <InfoCard label="Пол" value={profile.sexLabel} />
-        </div>
-
-        <div>
-          <p className="section-label mb-2">Активные продукты</p>
-          <p className="text-sm leading-relaxed" style={{ color: colors.text.secondary }}>
-            {ownedProducts}
-          </p>
         </div>
 
         <div>
