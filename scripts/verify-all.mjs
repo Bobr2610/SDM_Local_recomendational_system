@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const py = join(root, '.venv', 'Scripts', 'python.exe')
 const pyUnix = join(root, '.venv', 'bin', 'python')
-const python = existsSync(py) ? py : pyUnix
+const pyUnix2 = join(root, 'venv', 'bin', 'python')
+const python = existsSync(py) ? py : (existsSync(pyUnix) ? pyUnix : pyUnix2)
 
 function run(label, cmd, args, opts = {}) {
   console.log(`\n▶ ${label}`)

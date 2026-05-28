@@ -1,8 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
-import { Card, CardBody, CardHeader, Button, Badge } from '../components/ui'
+import { Card, CardBody, CardHeader, Button, Badge, Header } from '../shared/ui'
 import { getProductById } from '../data/productParser'
-import { Header } from '../components/layout'
-import { colors } from '../config/theme'
+import { colors } from '../shared/config/theme'
 
 const CATEGORY_LABELS: Record<string, string> = {
   deposits_and_savings_accounts_individuals: 'Вклады',

@@ -1,6 +1,6 @@
 /**
  * Демо-профили: квантили дохода 0.05 / 0.25 / 0.5 / 0.8 по train_wide_with_lags.
- * Пересчитать: python backend/scripts/profiles_from_train_long_quantiles.py --apply
+ * Пересчитать: python backend/scripts/data_prep/profiles_from_train_long_quantiles.py --apply
  */
 import { PORTRAITS } from './portraits'
 import type { AccountType, Currency } from '../store/userInputStore'

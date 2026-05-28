@@ -1,11 +1,7 @@
 import { create } from 'zustand'
-import type { AdSelectionResponse } from '../types'
-import { adsApi, analyticsApi } from '../api/endpoints'
-import { ANALYTICS } from '../config/features'
-import { generateSessionId } from '../utils/session'
-import { getItem, setItem } from '../utils/storage'
-import { initModel } from '../services/modelInference'
-import type { Segment } from '../utils/profileToModel'
+import { generateSessionId } from '../shared/lib/session'
+import { getItem, setItem } from '../shared/lib/storage'
+import type { Segment } from '../model/profileToModel'
 
 export type Currency = 'RUB' | 'USD' | 'EUR' | 'CNY'
 export type AccountType = 'savings' | 'current' | 'deposit' | 'card'
@@ -26,16 +22,10 @@ export interface UserProfile {
 
 interface UserInputState extends UserProfile {
   sessionId: string
-  selectedAd: AdSelectionResponse | null
-  adHistory: AdSelectionResponse[]
-  isLoading: boolean
-  error: string | null
   clickHistory: Record<string, number>
   clickTimeline: { productId: string; time: string }[]
   setField: <K extends keyof UserProfile>(field: K, value: UserProfile[K]) => void
   trackClick: (productId: string) => void
-  fetchAd: () => Promise<void>
-  clearError: () => void
 }
 
 const DEFAULTS: UserProfile = {
@@ -67,27 +57,17 @@ function saveState(profile: UserProfile, clicks: Record<string, number>) {
   setItem(CLICK_KEY, clicks)
 }
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-
 const saved = loadSavedState()
 
 export const useUserInputStore = create<UserInputState>((set, get) => ({
   ...saved.profile,
   sessionId: generateSessionId(),
-  selectedAd: null,
-  adHistory: [],
-  isLoading: false,
-  error: null,
   clickHistory: saved.clicks,
   clickTimeline: [],
 
   setField: (field, value) => {
     set({ [field]: value } as Partial<UserInputState>)
     saveState({ ...get(), ...{ [field]: value } } as UserProfile, get().clickHistory)
-    if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-      get().fetchAd()
-    }, 300)
   },
 
   trackClick: (productId: string) => {
@@ -104,59 +84,5 @@ export const useUserInputStore = create<UserInputState>((set, get) => ({
       ],
     })
     saveState(state as UserProfile, newClicks)
-
-    if (ANALYTICS.ENABLED) {
-      analyticsApi.track({
-        id: crypto.randomUUID?.() ?? `${Date.now()}`,
-        type: 'button_click',
-        payload: { productId, totalClicks: newClicks[productId] },
-        timestamp: new Date().toISOString(),
-        sessionId: state.sessionId,
-      })
-    }
-
-    // Пересчёт рекомендации после клика
-    if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-      get().fetchAd()
-    }, 500)
   },
-
-  fetchAd: async () => {
-    const state = get()
-    const { age, balance, monthlyIncome, accountType, currency, clickHistory, sessionId } = state
-    set({ isLoading: true, error: null })
-
-    try {
-      let adResponse: AdSelectionResponse
-
-      await initModel()
-      const response = await adsApi.select({
-        age,
-        balance,
-        monthlyIncome,
-        sessionId,
-        sex: state.sex,
-        seniorityMonths: state.seniorityMonths,
-        isNewCustomer: state.isNewCustomer,
-        segment: state.segment,
-        regionName: state.regionName,
-        accountType,
-        currency,
-        clickHistory,
-      })
-      if (response.error) throw new Error(response.error)
-      adResponse = response.data
-
-      set((state) => ({
-        selectedAd: adResponse,
-        adHistory: [...state.adHistory, adResponse],
-        isLoading: false,
-      }))
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Ошибка подбора', isLoading: false })
-    }
-  },
-
-  clearError: () => set({ error: null }),
 }))

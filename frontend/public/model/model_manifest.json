@@ -1,5 +1,5 @@
 {
-  "inference": "catboost_cbm_native",
+  "inference": "catboost_browser_runtime",
   "targets": {
     "web": "frontend/public/model",
     "expo_bundle": "mobile/assets/model"
@@ -7,13 +7,25 @@
   "files": {
     "catboost_pointwise.cbm": {
       "bytes": 3519512,
-      "sha256_16": "8c718c0345ec4744",
+      "sha256_16": "d8026754e2fcd048",
       "required": true
     },
     "catboost_model.json": {
-      "bytes": 2615,
+      "bytes": 2655,
+      "required": true
+    },
+    "catboost_model_full.json": {
+      "bytes": 9309251,
+      "required": true
+    },
+    "catboost_web_runtime.json": {
+      "bytes": 4980570,
+      "required": true
+    },
+    "catboost_cat_features_hashes.json": {
+      "bytes": 1867,
       "required": true
     }
   },
-  "train_hint": "python backend/scripts/train_catboost_pointwise.py && python backend/scripts/export_catboost_mobile.py"
+  "train_hint": "python backend/scripts/pipeline/train_catboost_pointwise.py && python backend/scripts/pipeline/export_catboost_mobile.py"
 }

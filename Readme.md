@@ -1,207 +1,142 @@
-# СДМ Банк — Персональные рекомендации (Edge ML)
+# SDM Bank Demo
 
-Система рекомендаций банковских продуктов. 
-**Модель обучается на сервере → сбрасывается на телефон → работает локально.**
+В проекте теперь реализован второй этап: web-рекомендации считаются локально в браузере, без backend inference и без HTTP-запросов за рекомендациями.
 
-## Архитектура потока данных
+## Что работает
 
-```
-┌─────────────┐     train     ┌──────────────┐
-│  Сервер     │──────────────→│ CatBoost     │
-│  (Python)   │               │  pointwise   │
-│             │               └──────┬───────┘
-│ Santander   │                      │
-│ Bank Churn  │               export │ catboost_pointwise.cbm
-│ Credit Card │                      │
-│ UCI Market  │                      ▼
-└─────────────┘     копия     ┌──────────────┐
-                             │  frontend/    │
-                             │  public/model │
-                             └──────┬───────┘
-                                    │
-                         загрузка   │
-                         по HTTP    │
-                                    ▼
-                             ┌──────────────┐
-                             │  Телефон     │
-                             │  (Android)   │
-                             │              │
-                             │  CatBoost    │
-                             │  .cbm native │
-                             │  (offline)   │
-                             │              │
-                             │  + персона-  │
-                             │  лизация по  │
-                             │  кликам      │
-                             └──────────────┘
+- `frontend/` считает рекомендации в браузере из статических артефактов в `frontend/public/model`.
+- Web path больше не использует `/products/recommendations` и `/ads/ai-select`.
+- `mobile/` сохраняет native Android CatBoost path через `.cbm`.
+- `backend/` нужен для train/export/data prep/parity scripts, а не для web inference.
+
+## Web inference
+
+Выбранный web artifact:
+
+- `frontend/public/model/catboost_model_full.json` — полный CatBoost JSON export.
+- `frontend/public/model/catboost_web_runtime.json` — browser runtime artifact, сериализованный из official CatBoost python applier.
+- `frontend/public/model/catboost_cat_features_hashes.json` — полная hash map для категориальных значений из реального датасета.
+
+Как это устроено:
+
+- `frontend/src/model/loadModel.ts` загружает metadata/runtime/hash map как static assets.
+- `frontend/src/model/buildPointwiseRows.ts` строит только mini-batch long-строк `user × candidate_product` для выбранного профиля.
+- Схема строк совпадает с `backend/scripts/data_prep/build_train_long.py`, но мы не генерим весь long-датасет.
+- `frontend/src/model/catboostJsonPredict.ts` повторяет official CatBoost applier: binarization, one-hot, CTR, tree traversal.
+- `frontend/src/model/recommend.ts` считает score для всех 22 candidate products и добавляет controlled click boost.
+
+## Реальные demo-профили
+
+Профили генерируются из реального датасета скриптом:
+
+```bash
+source .venv/bin/activate
+python backend/scripts/generate_demo_profiles.py
 ```
 
-## Структура проекта
+Вход:
 
+- `train_wide_filled_lags.csv` в корне, если есть
+- иначе fallback к `backend/datasets/raw/*`
+
+Выход:
+
+- `frontend/src/features/profiles/demoProfiles.generated.ts`
+- `backend/datasets/processed/demo_profiles.json`
+- `frontend/src/model/__fixtures__/profiles.json`
+
+Текущие 4 профиля:
+
+- `~15 000 ₽/мес`: `user_id=1289958`, факт `15 002.76 ₽`
+- `~100 000 ₽/мес`: `user_id=649589`, факт `100 000.08 ₽`
+- `~500 000 ₽/мес`: `user_id=1125781`, факт `499 978.68 ₽`
+- `~5 000 000 ₽/мес`: `user_id=167364`, факт `5 046 790.47 ₽`
+
+Примечание по балансу:
+
+- В `train_wide_filled_lags.csv` нет явной колонки `balance`.
+- Поэтому в audit artifact и UI хранится честный `balanceSource`; сейчас используется `income_lag_90_proxy`.
+
+## Экспорт модели
+
+Если у вас есть обученный `pkl`, положите его в:
+
+- `backend/models/export/catboost_pointwise_holdout.pkl`, или
+- корень проекта как `catboost_pointwise_holdout.pkl` / `catboost_pointwise_holdout_old_good.pkl`
+
+Экспорт:
+
+```bash
+source .venv/bin/activate
+python backend/scripts/pipeline/export_catboost_mobile.py
 ```
-SDM/
-├── frontend/                      # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── data/
-│   │   │   ├── ad-products.json   # ⭐ Все продукты + реклама (один файл!)
-│   │   │   └── productParser.ts   # Парсер JSON → React
-│   │   ├── services/              # Клиентский ML-инференс
-│   │   │   └── modelInference.ts  # Native CatBoost .cbm (Android)
-│   │   ├── components/            # UI компоненты
-│   │   ├── pages/                 # Страницы
-│   │   └── store/                 # Zustand
-│   └── public/model/              # catboost_pointwise.cbm (копия для web metadata)
-│
-├── backend/                       # ML-пайплайн (Python)
-│   ├── models/export/             # catboost_pointwise_holdout.pkl
-│   ├── src/
-│   │   ├── models/                # catboost_pointwise.py
-│   │   ├── pipeline/              # Данные: загрузка, фичи
-│   │   ├── evaluation/            # Метрики
-│   │   └── api/                   # FastAPI
-│   └── scripts/
-│       ├── train_catboost_pointwise.py
-│       └── export_catboost_mobile.py
-│
-├── docker-compose.yml             # Docker: frontend + backend + train
-└── Readme.md
+
+Скрипт обновляет:
+
+- `frontend/public/model/catboost_pointwise.cbm`
+- `frontend/public/model/catboost_model.json`
+- `frontend/public/model/catboost_model_full.json`
+- `frontend/public/model/catboost_web_runtime.json`
+- `frontend/public/model/catboost_cat_features_hashes.json`
+- `frontend/public/model/model_manifest.json`
+- `mobile/assets/model/*`
+
+## Parity
+
+Fixtures:
+
+- `frontend/src/model/__fixtures__/profiles.json`
+- `frontend/src/model/__fixtures__/expected_scores.json`
+
+Генерация reference scores:
+
+```bash
+source .venv/bin/activate
+python backend/scripts/pipeline/generate_model_parity_fixtures.py
 ```
 
-## Быстрый старт
+Проверка:
 
-### Фронтенд (без модели)
+```bash
+cd frontend
+npm run model:parity
+```
+
+Текущий результат:
+
+- overlap top-5 = `5/5` для всех 4 профилей
+- `maxDelta = 0.000000` для всех 4 профилей
+
+## Запуск
+
+Web:
 
 ```bash
 cd frontend
 npm install
 npm run dev -- --host
-# → http://localhost:5173
 ```
 
-Работает с JS-предиктором (клиентский инференс без сервера).
+Backend для web recommendations больше не нужен.
 
-### Полный цикл (обучение + деплой)
-
-**Датасет:** `backend/datasets/raw/train_wide_with_lags.csv`  
-**Подготовка данных (ноутбуки на main):** `datasets/00_clean_dataset.ipynb`, `01_generate_income_from_cleaned.ipynb` — если CSV уже готов, пропустите.
-
-**Демо-профили (квантили 0.05 / 0.25 / 0.5 / 0.8 из train_long):**
-```bash
-python backend/scripts/build_train_long.py
-python backend/scripts/profiles_from_train_long_quantiles.py --apply
-```
-Артефакт: `backend/datasets/processed/profile_quantiles.json`
-
-**Colab (обучение):** [ноутбук pointwise](https://colab.research.google.com/drive/18Egarg7p1_BW2NujhQFGHbwUW6U1XI4y) → сохраните `.pkl` в `backend/models/export/catboost_pointwise_holdout.pkl`
+## Обязательные проверки
 
 ```bash
-pip install -r backend/requirements.txt
-python backend/scripts/run_full_pipeline.py --sample-frac 0.25 --iterations 1200
-# или по шагам:
-python backend/scripts/train_catboost_pointwise.py
-python backend/scripts/export_catboost_mobile.py
-node scripts/verify-model.mjs
+cd frontend && npm run lint
 cd frontend && npm run build
+cd frontend && npm run model:parity
+node scripts/verify-model.mjs
+grep -R "fetchCatboostRecommendations\\|/products/recommendations\\|/ads/ai-select" frontend/src
+grep -R "Math.random\\|random_score\\|popularity" frontend/src/model frontend/src/features/recommendations
 ```
 
-Телефон (Expo): `phone.bat` — API на ПК + модель в `mobile/assets/model` + установка APK.
-Браузер на телефоне: `serve-phone.bat`.
+## Важные файлы
 
-### Проверка модели
-
-```bash
-cd backend
-python -c "
-from src.models.catboost_pointwise import get_recommender, UserContext
-r = get_recommender()
-ctx = UserContext.from_api(age=30, balance=250000, monthly_income=85000)
-print(r.rank_products(ctx, top_k=5))
-"
-```
-
-## Как управлять сайтом
-
-**Один файл:** `frontend/src/data/ad-products.json`
-
-| Поле | Действие |
-|------|----------|
-| `name` | Название в каталоге |
-| `description` | Текст на странице продукта |
-| `showOnHome: true` | Карточка-реклама на главной |
-| `color` | Градиент карточки |
-| `image` | Путь к картинке |
-
-Поменял JSON → изменился весь сайт.
-
-## CatBoost pointwise
-
-- **Сервер:** `catboost_pointwise_holdout.pkl` — полный инференс
-- **Телефон (Android):** `catboost_pointwise.cbm` (~3.5 MB) — **тот же CatBoost**, нативный applier (`ai.catboost:catboost-prediction`), офлайн в APK. Без logistic surrogate.
-- **Браузер:** рекомендации через API → серверный `.pkl` (тот же CatBoost).
-
-## Телефон (Expo + сервер на ПК)
-
-ПК и телефон в **одной Wi‑Fi**. Модель в приложении (локальный инференс), API — с ноутбука.
-
-| Команда | Что делает |
-|---------|------------|
-| `build-apk.bat` | Собрать APK → `dist/sdm-bank-debug.apk` (~2–5 мин после первой сборки) |
-| `phone.bat` | API `:8000` + export модели + `expo run:android` (USB) или Expo Go (QR) |
-| `phone.bat --expo-go` | Только Expo Go, без сборки APK |
-| `serve-phone.bat` | Браузер на телефоне (`:5173` + API) |
-
-```bat
-phone.bat
-```
-
-Перед первой сборкой: Android Studio / JDK 17, USB-отладка. Быстрый тест без APK: `phone.bat --expo-go` + приложение **Expo Go** из Play Store.
-
-## Docker
-
-```bash
-docker compose up --build     # только фронтенд (по умолчанию)
-docker compose --profile dev up --build # фронтенд + бэкенд
-```
-
-## Endpoint'ы (бэкенд)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | `/ads/ai-select` | AI-подбор рекламы |
-| POST | `/analytics/event` | События кликов |
-| GET | `/products` | Все продукты |
-| GET | `/model/health` | Статус модели |
-
-
-Сумма расходов за 7 дней
-Сумма расходов за 30 дней
-Сумма расходов за 90 дней
-
-Количество расходных операций за 7 дней
-Количество расходных операций за 30 дней
-Количество активных дней с расходами за 30 дней
-Средний размер расходной операции за 30 дней
-Самая крупная расходная операция за 90 дней
-
-
-Дней с последней расходной операции
-
-
-Сумма входящих поступлений за 30 дней
-Сумма входящих поступлений за 90 дней
-Количество входящих поступлений за 30 дней
-
-Средний баланс за 30 дней
-Средний баланс за 90 дней
-Минимальный баланс за 30 дней
-Максимальный баланс за 30 дней
-Текущий баланс
-
-Расходы минус доходы за 30 дней
-
-# Категории товаров
-Сумма повседневных расходов за 30 дней
-Количество повседневных покупок за 30 дней
-Доля повседневных покупок от всех расходов
-
-Аналогично как и для повседневных: онлайн покупки, рестораны/кафе, комунальные/регулярные платежи, медицина/образование/ремонт/крупные покупки
+- `frontend/src/model/loadModel.ts`
+- `frontend/src/model/catboostJsonPredict.ts`
+- `frontend/src/model/buildPointwiseRows.ts`
+- `frontend/src/model/recommend.ts`
+- `frontend/src/features/recommendations/RecommendationsPanel.tsx`
+- `backend/scripts/generate_demo_profiles.py`
+- `backend/scripts/pipeline/export_catboost_mobile.py`
+- `backend/scripts/pipeline/generate_model_parity_fixtures.py`

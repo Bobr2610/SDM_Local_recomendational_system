@@ -8,6 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const web = join(root, 'frontend', 'public', 'model')
 const mobile = join(root, 'mobile', 'assets', 'model')
 const required = ['catboost_pointwise.cbm', 'catboost_model.json', 'feature_order.json']
+const webOnly = ['catboost_model_full.json', 'catboost_web_runtime.json', 'catboost_cat_features_hashes.json']
 
 let ok = true
 
@@ -27,11 +28,23 @@ function check(dir, label) {
       console.log(`  ✓ ${f} (${Math.round(statSync(p).size / 1024)} KB)`)
     }
   }
+  if (label.startsWith('Web')) {
+    for (const f of webOnly) {
+      const p = join(dir, f)
+      if (!existsSync(p)) {
+        console.log(`  ✖ ${f}`)
+        ok = false
+      } else {
+        console.log(`  ✓ ${f} (${Math.round(statSync(p).size / 1024)} KB)`)
+      }
+    }
+  }
   const metaPath = join(dir, 'catboost_model.json')
   if (existsSync(metaPath)) {
     const meta = JSON.parse(readFileSync(metaPath, 'utf8'))
-    if (meta.inference !== 'catboost_cbm_native') {
-      console.log(`  ✖ inference=${meta.inference} (expected catboost_cbm_native)`)
+    const expectedInference = label.startsWith('Web') ? 'catboost_browser_runtime' : 'catboost_cbm_native'
+    if (meta.inference !== expectedInference) {
+      console.log(`  ✖ inference=${meta.inference} (expected ${expectedInference})`)
       ok = false
     }
     if (!meta.products?.length) {

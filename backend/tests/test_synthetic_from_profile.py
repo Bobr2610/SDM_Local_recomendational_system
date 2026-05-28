@@ -25,7 +25,7 @@ def demo_profiles() -> list[dict]:
 
 def test_typescript_file_matches_embedded_source():
     ts_path = ROOT / "mobile" / "src" / "services" / "syntheticFromProfile.generated.ts"
-    assert ts_path.exists(), "Run: python backend/scripts/generate_synthetic_ts.py"
+    assert ts_path.exists(), "Run: python backend/scripts/data_prep/generate_synthetic_ts.py"
     assert ts_path.read_text(encoding="utf-8") == typescript_source()
 
 
@@ -41,7 +41,7 @@ def test_typescript_file_matches_embedded_source():
 )
 def test_synthetic_keys_stable(age, income, balance, segment):
     out = synthetic_from_profile(age, income, balance, segment)
-    assert len(out) == 11
+    assert len(out) == 13
     assert out["synthetic_turnover_30d"] > 0
 
 

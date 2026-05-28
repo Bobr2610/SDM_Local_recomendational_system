@@ -1,10 +1,11 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useState } from 'react'
-import { Header } from '../components/layout'
-import { ClientSelector, PROFILES } from '../components/features/advertising/ClientSelector'
-import { ClientProfile } from '../components/features/advertising/ClientProfile'
-import { RecommendationsPanel } from '../components/features/advertising/RecommendationsPanel'
-import { colors } from '../config/theme'
-import { useHorizontalSwipe } from '../hooks/useHorizontalSwipe'
+import { Header } from '../shared/ui'
+import { ClientSelector, PROFILES } from '../features/profiles/ClientSelector'
+import { ClientProfile } from '../features/profiles/ClientProfile'
+import { RecommendationsPanel } from '../features/recommendations/RecommendationsPanel'
+import { colors } from '../shared/config/theme'
+import { useHorizontalSwipe } from '../shared/lib/useHorizontalSwipe'
 import { useUserInputStore } from '../store'
 
 export function HomePage() {

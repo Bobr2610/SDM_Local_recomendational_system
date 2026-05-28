@@ -12,3 +12,5 @@ backend/models/export/*.onnx
 *.csv
 .DS_Store
 venv/
+dist/
+dist/*.apk

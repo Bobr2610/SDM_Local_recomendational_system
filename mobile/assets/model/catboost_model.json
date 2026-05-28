@@ -1,7 +1,10 @@
 {
-  "version": 3,
+  "version": 4,
   "inference": "catboost_cbm_native",
   "model_file": "catboost_pointwise.cbm",
+  "web_runtime_file": "catboost_web_runtime.json",
+  "web_full_json_file": "catboost_model_full.json",
+  "cat_feature_hashes_file": "catboost_cat_features_hashes.json",
   "products": [
     "dep-7",
     "card-2",
@@ -118,5 +121,5 @@
     "segment",
     "product"
   ],
-  "source_pkl": "backend/models/export/catboost_pointwise_holdout.pkl"
+  "source_pkl": "catboost_pointwise_holdout_old_good.pkl"
 }
