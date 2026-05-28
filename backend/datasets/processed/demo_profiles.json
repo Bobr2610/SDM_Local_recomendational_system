@@ -1,35 +1,192 @@
 {
-  "sourceDataset": "train_wide_filled_lags.csv",
+  "sourceDataset": "backend/datasets/raw/train_wide_with_lags.csv",
   "displayCurrency": "RUB/month",
   "modelIncomeUnit": "EUR/year",
-  "rubPerEur": 100.0,
+  "incomeCalibrationCoefficient": 12.0,
+  "calibrationKind": "market_adjusted_not_fx_rate",
+  "calibrationSummary": {
+    "selectedCoefficient": 12.0,
+    "selectionReason": "Coefficient 12 places 100k RUB/month near the median, 500k RUB/month near p99, and 5M RUB/month in the extreme upper tail. Starting coefficient 20 made the distribution too high for the Russian demo scale.",
+    "startCoefficient": 20.0,
+    "selectedReport": {
+      "coefficient": 12.0,
+      "quantilesRubMonth": {
+        "p05": 45943,
+        "p25": 74997,
+        "p50": 100602,
+        "p75": 144004,
+        "p90": 219109,
+        "p95": 286775,
+        "p99": 498722
+      },
+      "targetQuantiles": {
+        "15000": 0.0006,
+        "100000": 0.4953,
+        "500000": 0.9901,
+        "5000000": 0.9998
+      }
+    }
+  },
+  "calibrationReport": [
+    {
+      "coefficient": 4.0,
+      "quantilesRubMonth": {
+        "p05": 15314,
+        "p25": 24999,
+        "p50": 33534,
+        "p75": 48001,
+        "p90": 73036,
+        "p95": 95592,
+        "p99": 166240
+      },
+      "targetQuantiles": {
+        "15000": 0.0464,
+        "100000": 0.9557,
+        "500000": 0.9993,
+        "5000000": 1.0
+      }
+    },
+    {
+      "coefficient": 8.0,
+      "quantilesRubMonth": {
+        "p05": 30628,
+        "p25": 49998,
+        "p50": 67068,
+        "p75": 96003,
+        "p90": 146073,
+        "p95": 191183,
+        "p99": 332481
+      },
+      "targetQuantiles": {
+        "15000": 0.003,
+        "100000": 0.7695,
+        "500000": 0.9964,
+        "5000000": 0.9998
+      }
+    },
+    {
+      "coefficient": 12.0,
+      "quantilesRubMonth": {
+        "p05": 45943,
+        "p25": 74997,
+        "p50": 100602,
+        "p75": 144004,
+        "p90": 219109,
+        "p95": 286775,
+        "p99": 498722
+      },
+      "targetQuantiles": {
+        "15000": 0.0006,
+        "100000": 0.4953,
+        "500000": 0.9901,
+        "5000000": 0.9998
+      }
+    },
+    {
+      "coefficient": 15.0,
+      "quantilesRubMonth": {
+        "p05": 57428,
+        "p25": 93747,
+        "p50": 125753,
+        "p75": 180005,
+        "p90": 273886,
+        "p95": 358469,
+        "p99": 623402
+      },
+      "targetQuantiles": {
+        "15000": 0.0002,
+        "100000": 0.3013,
+        "500000": 0.9796,
+        "5000000": 0.9997
+      }
+    },
+    {
+      "coefficient": 20.0,
+      "quantilesRubMonth": {
+        "p05": 76571,
+        "p25": 124995,
+        "p50": 167670,
+        "p75": 240007,
+        "p90": 365181,
+        "p95": 477958,
+        "p99": 831202
+      },
+      "targetQuantiles": {
+        "15000": 0.0001,
+        "100000": 0.1168,
+        "500000": 0.9557,
+        "5000000": 0.9997
+      }
+    },
+    {
+      "coefficient": 25.0,
+      "quantilesRubMonth": {
+        "p05": 95714,
+        "p25": 156244,
+        "p50": 209588,
+        "p75": 300008,
+        "p90": 456477,
+        "p95": 597448,
+        "p99": 1039003
+      },
+      "targetQuantiles": {
+        "15000": 0.0,
+        "100000": 0.0581,
+        "500000": 0.9212,
+        "5000000": 0.9996
+      }
+    },
+    {
+      "coefficient": 30.0,
+      "quantilesRubMonth": {
+        "p05": 114856,
+        "p25": 187493,
+        "p50": 251506,
+        "p75": 360010,
+        "p90": 547772,
+        "p95": 716937,
+        "p99": 1246804
+      },
+      "targetQuantiles": {
+        "15000": 0.0,
+        "100000": 0.0298,
+        "500000": 0.875,
+        "5000000": 0.9995
+      }
+    }
+  ],
   "targets": [
     15000,
     100000,
     500000,
     5000000
   ],
-  "maxAvailableIncome": 28894395.51,
-  "usedMaxInsteadOfTarget": false,
+  "maxAvailableMonthlyIncomeRub": 28894396,
+  "usedUpperTailInsteadOfTarget": false,
   "profiles": [
     {
-      "id": "user-1431216",
+      "id": "user-1289958",
       "name": "Клиент 15k",
-      "sourceUserId": 1431216,
+      "sourceUserId": 1289958,
       "targetMonthlyIncomeRub": 15000,
-      "targetIncomeEurYear": 1800.0,
-      "modelIncomeEurYear": 3731.79,
-      "displayIncomeRubMonth": 31098.25,
-      "incomeQuantile": 0.0,
-      "age": 20,
-      "balance": 3731.79,
-      "balanceSource": "income_lag_90_proxy",
+      "modelIncomeEurYear": 15002.76,
+      "rawIncome": {
+        "field": "income_filled",
+        "value": 15002.76,
+        "unit": "EUR/year"
+      },
+      "monthlyIncomeRub": 15003,
+      "incomeQuantile": 0.0006,
+      "selectionReason": "Nearest real client to target 15 000 RUB/month after calibrated conversion; delta 3 RUB/month.",
+      "age": 24,
+      "balance": 5250.97,
+      "balanceSource": "income_share_proxy",
       "sex": 0,
       "sexLabel": "Женщина",
-      "seniorityMonths": 9,
+      "seniorityMonths": 21,
       "isNewCustomer": 0,
       "segment": "STUDENTS",
-      "regionName": "CIUDAD REAL",
+      "regionName": "ZAMORA",
       "ownedProducts": [
         "card-2"
       ],
@@ -65,22 +222,27 @@
       ]
     },
     {
-      "id": "user-1452428",
+      "id": "user-649589",
       "name": "Клиент 100k",
-      "sourceUserId": 1452428,
+      "sourceUserId": 649589,
       "targetMonthlyIncomeRub": 100000,
-      "targetIncomeEurYear": 12000.0,
-      "modelIncomeEurYear": 12024.39,
-      "displayIncomeRubMonth": 100203.25,
-      "incomeQuantile": 0.0002,
-      "age": 21,
-      "balance": 12024.39,
-      "balanceSource": "income_lag_90_proxy",
-      "sex": 0,
-      "sexLabel": "Женщина",
-      "seniorityMonths": 8,
+      "modelIncomeEurYear": 100000.08,
+      "rawIncome": {
+        "field": "income_filled",
+        "value": 100000.08,
+        "unit": "EUR/year"
+      },
+      "monthlyIncomeRub": 100000,
+      "incomeQuantile": 0.4953,
+      "selectionReason": "Nearest real client to target 100 000 RUB/month after calibrated conversion; delta 0 RUB/month.",
+      "age": 55,
+      "balance": 35000.03,
+      "balanceSource": "income_share_proxy",
+      "sex": 1,
+      "sexLabel": "Мужчина",
+      "seniorityMonths": 115,
       "isNewCustomer": 0,
-      "segment": "STUDENTS",
+      "segment": "INDIVIDUALS",
       "regionName": "SEVILLA",
       "ownedProducts": [
         "card-2"
@@ -109,34 +271,39 @@
         "loan-4": 0,
         "card-3": 0
       },
-      "info": "Студент",
+      "info": "Частный клиент",
       "description": "Реальный клиент из датасета  выбранный рядом с уровнем дохода 100 000 ₽/мес.",
       "characteristics": [
-        "Стартовый доход",
+        "Стабильный доход",
         "Профиль из реального датасета"
       ]
     },
     {
-      "id": "user-449839",
+      "id": "user-1125781",
       "name": "Клиент 500k",
-      "sourceUserId": 449839,
+      "sourceUserId": 1125781,
       "targetMonthlyIncomeRub": 500000,
-      "targetIncomeEurYear": 60000.0,
-      "modelIncomeEurYear": 60000.12,
-      "displayIncomeRubMonth": 500001.0,
-      "incomeQuantile": 0.1168,
-      "age": 59,
-      "balance": 60000.12,
-      "balanceSource": "income_lag_90_proxy",
+      "modelIncomeEurYear": 499978.68,
+      "rawIncome": {
+        "field": "income_filled",
+        "value": 499978.68,
+        "unit": "EUR/year"
+      },
+      "monthlyIncomeRub": 499979,
+      "incomeQuantile": 0.9901,
+      "selectionReason": "Nearest real client to target 500 000 RUB/month after calibrated conversion; delta 21 RUB/month.",
+      "age": 23,
+      "balance": 174992.54,
+      "balanceSource": "income_share_proxy",
       "sex": 1,
       "sexLabel": "Мужчина",
-      "seniorityMonths": 149,
+      "seniorityMonths": 38,
       "isNewCustomer": 0,
       "segment": "INDIVIDUALS",
-      "regionName": "HUESCA",
+      "regionName": "CANTABRIA",
       "ownedProducts": [
         "card-2",
-        "srv-3"
+        "rko-1"
       ],
       "ownedProductFlags": {
         "dep-7": 0,
@@ -150,12 +317,12 @@
         "dep-9": 0,
         "dep-1": 0,
         "dep-3": 0,
-        "rko-1": 0,
+        "rko-1": 1,
         "dep-2": 0,
         "loan-2": 0,
         "card-4": 0,
         "loan-1": 0,
-        "srv-3": 1,
+        "srv-3": 0,
         "loan-5": 0,
         "biz-4": 0,
         "dep-6": 0,
@@ -165,31 +332,38 @@
       "info": "Частный клиент",
       "description": "Реальный клиент из датасета  выбранный рядом с уровнем дохода 500 000 ₽/мес.",
       "characteristics": [
-        "Высокий доход",
+        "Стабильный доход",
+        "Есть бизнес-продукты",
         "Профиль из реального датасета"
       ]
     },
     {
-      "id": "user-916185",
+      "id": "user-167364",
       "name": "Клиент 5000k",
-      "sourceUserId": 916185,
+      "sourceUserId": 167364,
       "targetMonthlyIncomeRub": 5000000,
-      "targetIncomeEurYear": 600000.0,
-      "modelIncomeEurYear": 599962.14,
-      "displayIncomeRubMonth": 4999684.5,
-      "incomeQuantile": 0.9939,
-      "age": 38,
-      "balance": 599962.14,
-      "balanceSource": "income_lag_90_proxy",
-      "sex": 0,
-      "sexLabel": "Женщина",
-      "seniorityMonths": 59,
+      "modelIncomeEurYear": 5046790.47,
+      "rawIncome": {
+        "field": "income_filled",
+        "value": 5046790.47,
+        "unit": "EUR/year"
+      },
+      "monthlyIncomeRub": 5046790,
+      "incomeQuantile": 0.9998,
+      "selectionReason": "Nearest real client to target 5 000 000 RUB/month after calibrated conversion; delta 46 790 RUB/month.",
+      "age": 70,
+      "balance": 1766376.66,
+      "balanceSource": "income_share_proxy",
+      "sex": 1,
+      "sexLabel": "Мужчина",
+      "seniorityMonths": 194,
       "isNewCustomer": 0,
       "segment": "INDIVIDUALS",
       "regionName": "MADRID",
       "ownedProducts": [
         "card-2",
-        "rko-2"
+        "rko-4",
+        "srv-3"
       ],
       "ownedProductFlags": {
         "dep-7": 0,
@@ -197,9 +371,9 @@
         "dep-5": 0,
         "card-1": 0,
         "card-5": 0,
-        "rko-2": 1,
+        "rko-2": 0,
         "rko-3": 0,
-        "rko-4": 0,
+        "rko-4": 1,
         "dep-9": 0,
         "dep-1": 0,
         "dep-3": 0,
@@ -208,7 +382,7 @@
         "loan-2": 0,
         "card-4": 0,
         "loan-1": 0,
-        "srv-3": 0,
+        "srv-3": 1,
         "loan-5": 0,
         "biz-4": 0,
         "dep-6": 0,

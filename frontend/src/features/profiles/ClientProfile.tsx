@@ -1,6 +1,6 @@
 import { syntheticFromProfile } from '../../model/syntheticFromProfile.generated'
 import { colors, formatRubles } from '../../shared/config/theme'
-import type { ProfileData } from './ClientSelector'
+import { formatIncomeQuantile, type ProfileData } from './ClientSelector'
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`
@@ -21,15 +21,15 @@ export function ClientProfile({ profile }: { profile: ProfileData }) {
           Реальный клиент из датасета
         </h2>
         <p className="text-sm mt-2" style={{ color: colors.text.secondary }}>
-          user_id {profile.sourceUserId} • цель {formatRubles(profile.targetMonthlyIncomeRub)} • факт {formatRubles(profile.displayIncomeRubMonth)}
+          user_id {profile.sourceUserId} • цель {formatRubles(profile.targetMonthlyIncomeRub)} • факт {formatRubles(profile.monthlyIncomeRub)}
         </p>
       </div>
 
       <div className="flex flex-col gap-5 p-5">
         <div className="grid grid-cols-2 gap-3">
           <InfoCard label="Возраст" value={`${profile.age} лет`} />
-          <InfoCard label="Доход" value={formatRubles(profile.displayIncomeRubMonth)} />
-          <InfoCard label="Модельный доход" value={`${profile.modelIncomeEurYear.toLocaleString('ru-RU')} EUR/год`} />
+          <InfoCard label="Доход" value={formatRubles(profile.monthlyIncomeRub)} />
+          <InfoCard label="Квантиль дохода" value={formatIncomeQuantile(profile.incomeQuantile)} />
           <InfoCard label={balanceLabel} value={formatRubles(profile.balance)} />
           <InfoCard label="Стаж" value={`${profile.seniorityMonths} мес.`} />
           <InfoCard label="Сегмент" value={profile.segment} />

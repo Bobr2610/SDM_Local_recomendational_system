@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   for (const rawProfile of fixtureProfiles as Array<Record<string, unknown>>) {
     const profile = {
       ...rawProfile,
-      monthlyIncome: rawProfile.displayIncomeRubMonth,
+      monthlyIncome: rawProfile.monthlyIncomeRub,
       accountType: 'current',
       currency: 'RUB',
     } as ProfileForModel

@@ -16,8 +16,8 @@ const GRADIENTS = [
 export interface ProfileData extends ProfileForModel {
   sourceUserId: number
   targetMonthlyIncomeRub: number
-  targetIncomeEurYear: number
   incomeQuantile: number
+  selectionReason: string
   balanceSource: string
   sexLabel: string
   ownedProductFlags: Record<string, number>
@@ -32,7 +32,7 @@ export const PROFILES: ProfileData[] = DEMO_PROFILES.map((profile, index) => ({
   ...profile,
   characteristics: [...profile.characteristics],
   ownedProducts: [...profile.ownedProducts],
-  monthlyIncome: profile.displayIncomeRubMonth,
+  monthlyIncome: profile.monthlyIncomeRub,
   avatar: AVATARS[index] ?? AVATARS[0],
   avatarBg: GRADIENTS[index] ?? GRADIENTS[0],
   accountType: profile.ownedProducts.some((item) => item.startsWith('card-'))
@@ -42,6 +42,11 @@ export const PROFILES: ProfileData[] = DEMO_PROFILES.map((profile, index) => ({
       : 'current',
   currency: 'RUB',
 }))
+
+export function formatIncomeQuantile(value: number): string {
+  if (value > 0 && value < 0.01) return '<1%'
+  return `${Math.round(value * 100)}%`
+}
 
 export function ClientSelector({
   selectedIdx,
@@ -80,13 +85,13 @@ export function ClientSelector({
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-bold text-[15px] leading-tight tracking-tight truncate" style={{ color: colors.text.primary }}>
-                {formatRubles(profile.displayIncomeRubMonth)}
+                {formatRubles(profile.monthlyIncomeRub)}
               </div>
               <div className="text-[13px] mt-0.5 leading-snug truncate font-medium" style={{ color: colors.text.secondary }}>
                 {profile.info}, {profile.age} лет
               </div>
               <div className="text-[12px] mt-1 leading-snug font-medium truncate" style={{ color: colors.text.muted }}>
-                user_id {profile.sourceUserId}, квантиль {Math.round(profile.incomeQuantile * 100)}%
+                user_id {profile.sourceUserId}, квантиль {formatIncomeQuantile(profile.incomeQuantile)}
               </div>
             </div>
           </button>

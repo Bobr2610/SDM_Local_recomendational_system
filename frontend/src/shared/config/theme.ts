@@ -52,5 +52,5 @@ export const colors = {
 } as const
 
 export function formatRubles(n: number): string {
-  return `${n.toLocaleString('ru-RU')} ₽`
+  return `${Math.round(n).toLocaleString('ru-RU')} ₽`
 }

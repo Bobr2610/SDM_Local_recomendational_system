@@ -12,7 +12,8 @@ BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BACKEND))
 
 QUANTILES = ROOT / "backend" / "datasets" / "processed" / "profile_quantiles.json"
-RUB_PER_EUR = 100.0  # ориентир из обсуждения в проекте
+# Market-calibrated income coefficient, not an official EUR/RUB FX rate.
+EUR_TO_RUB_CALIBRATED = 12.0
 
 MANUAL_RUB_MONTHLY = {
     "Матвей": 15_000,
@@ -22,11 +23,11 @@ MANUAL_RUB_MONTHLY = {
 }
 
 
-def rub_monthly_to_annual_eur(rub_monthly: float, rate: float = RUB_PER_EUR) -> float:
+def rub_monthly_to_model_eur_year(rub_monthly: float, rate: float = EUR_TO_RUB_CALIBRATED) -> float:
     return (rub_monthly / rate) * 12.0
 
 
-def annual_eur_to_rub_monthly(annual_eur: float, rate: float = RUB_PER_EUR) -> float:
+def model_eur_year_to_rub_monthly(annual_eur: float, rate: float = EUR_TO_RUB_CALIBRATED) -> float:
     return annual_eur * rate / 12.0
 
 
@@ -44,7 +45,7 @@ def main() -> None:
     for p in profiles:
         ui = p["monthlyIncome"]
         target_eur = ui  # quantile script wrote annual EUR into monthlyIncome field
-        via_convert = rub_monthly_to_annual_eur(ui)
+        via_convert = rub_monthly_to_model_eur_year(ui)
         ok_id = abs(via_convert - target_eur) / max(target_eur, 1) < 0.02
         if not ok_id:
             all_ok_converted = False
@@ -59,20 +60,20 @@ def main() -> None:
         )
 
     print("-" * 72)
-    print("\nПри конвертации RUB/мес → EUR/год (×12 / 100) текущие числа в UI НЕ совпадают с квантилями.")
+    print("\nПри calibrated conversion RUB/мес → model EUR/year текущие числа в UI НЕ совпадают с квантилями.")
     print("Сейчас в UI фактически показана годовая EUR-величина квантиля, подписанная как ₽/мес.\n")
 
     print("=" * 72)
-    print(f"Какие ₽/мес должны быть в UI при квантиле EUR/год (R={RUB_PER_EUR:.0f}):\n")
+    print(f"Какие ₽/мес должны быть в UI при квантиле EUR/год (calibrated coefficient={EUR_TO_RUB_CALIBRATED:.0f}):\n")
     for p in profiles:
         eur = p["monthlyIncome"]
-        rub = annual_eur_to_rub_monthly(eur)
+        rub = model_eur_year_to_rub_monthly(eur)
         print(f"  {p['name']}: {rub:,.0f} ₽/мес  ↔  {eur:,} EUR/год (q={p['quantile']})")
 
     print("\n" + "=" * 72)
     print("Ваши старые ручные значения (коммит до квантилей):\n")
     for name, rub in MANUAL_RUB_MONTHLY.items():
-        eur = rub_monthly_to_annual_eur(rub)
+        eur = rub_monthly_to_model_eur_year(rub)
         print(f"  {name}: {rub:,} ₽/мес  →  {eur:,.0f} EUR/год")
 
     print("\nИтог:")
