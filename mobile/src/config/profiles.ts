@@ -10,6 +10,7 @@ export interface ProfileData extends ModelProfileFields {
   balance: number
   monthlyIncome: number
   modelIncomeEurYear: number
+  ownedProducts: string[]
   accountType: AccountType
   currency: Currency
   info: string
@@ -33,6 +34,7 @@ export const PROFILES: ProfileData[] = [
     isNewCustomer: 0,
     segment: 'INDIVIDUALS',
     regionName: 'VALLADOLID',
+    ownedProducts: ['card-2'],
     info: 'Частный клиент',
     avatar: PORTRAITS.matvey,
     avatarBg: ['#e8ecf8', '#d4dcf0'],
@@ -56,6 +58,7 @@ export const PROFILES: ProfileData[] = [
     isNewCustomer: 0,
     segment: 'VIP',
     regionName: 'ASTURIAS',
+    ownedProducts: ['rko-1'],
     info: 'Премиум',
     avatar: PORTRAITS.artem,
     avatarBg: ['#f0e8f8', '#e0d4f0'],
@@ -79,6 +82,7 @@ export const PROFILES: ProfileData[] = [
     isNewCustomer: 0,
     segment: 'INDIVIDUALS',
     regionName: 'VALLADOLID',
+    ownedProducts: ['card-1', 'rko-2', 'loan-4', 'card-3'],
     info: 'Частный клиент',
     avatar: PORTRAITS.danya,
     avatarBg: ['#fff4e6', '#fce8d4'],
@@ -102,6 +106,7 @@ export const PROFILES: ProfileData[] = [
     isNewCustomer: 0,
     segment: 'VIP',
     regionName: 'MADRID',
+    ownedProducts: ['card-2', 'rko-4', 'rko-1', 'srv-3', 'loan-5', 'biz-4'],
     info: 'Премиум',
     avatar: PORTRAITS.mikhail,
     avatarBg: ['#e8f8ef', '#d4efe0'],

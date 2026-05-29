@@ -16,6 +16,10 @@ export interface ProfileForModel extends ModelProfileFields {
   age: number
   balance: number
   monthlyIncome: number
+  /** Годовой доход для CatBoost (income_at_lag), как scoringIncome на web. */
+  modelIncomeEurYear?: number
+  /** Уже оформленные продукты — фичи own_* в pointwise-строках. */
+  ownedProducts?: string[]
   accountType: AccountType
   currency: Currency
 }
@@ -36,7 +40,8 @@ export function profileToUserFeatures(
   return {
     age: profile.age,
     balance: profile.balance,
-    monthlyIncome: profile.monthlyIncome,
+    monthlyIncome: profile.modelIncomeEurYear ?? profile.monthlyIncome,
+    ownedProducts: profile.ownedProducts ?? [],
     accountType: ACCOUNT_MAP[profile.accountType] ?? 0,
     currency: CURRENCY_MAP[profile.currency] ?? 0,
     clicks,

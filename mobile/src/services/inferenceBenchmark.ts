@@ -62,7 +62,7 @@ async function measureLoop(iterations: number, fn: () => Promise<void>): Promise
 }
 
 function buildProfileSummary(profile: ProfileData): string {
-  return `${profile.name}, ${profile.age} лет, ${profile.segment}, доход ${Math.round(profile.monthlyIncome).toLocaleString('ru-RU')} €/мес`
+  return `${profile.name}, ${profile.age} лет, ${profile.segment}, доход ${Math.round(profile.modelIncomeEurYear).toLocaleString('ru-RU')} €/год`
 }
 
 function logStats(label: string, stats: TimedStats) {

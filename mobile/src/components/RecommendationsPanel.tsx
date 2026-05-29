@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
@@ -138,23 +138,41 @@ export function RecommendationsPanel({ profile }: { profile: ProfileData | null 
   const clickHistory = useUserInputStore((s) => s.clickHistory)
   const trackClick = useUserInputStore((s) => s.trackClick)
   const [products, setProducts] = useState<AdProduct[]>([])
+  const [loading, setLoading] = useState(false)
+  const [modelError, setModelError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     if (mode === 'popular') {
+      setLoading(false)
+      setModelError(null)
       setProducts(uniqueProducts(getPopularProducts(), 5))
       return
     }
 
     if (!profile) {
+      setLoading(false)
+      setModelError(null)
       setProducts([])
       return
     }
 
+    setLoading(true)
+    setModelError(null)
+    setProducts([])
+
     void (async () => {
-      const list = await fetchRecommendationsForProfile(profile)
-      if (!cancelled) setProducts(uniqueProducts(list, 5))
+      const result = await fetchRecommendationsForProfile(profile)
+      if (cancelled) return
+      setLoading(false)
+      if (result.status === 'error') {
+        setModelError(result.message)
+        setProducts([])
+        return
+      }
+      setModelError(null)
+      setProducts(uniqueProducts(result.products, 5))
     })()
 
     return () => {
@@ -170,7 +188,23 @@ export function RecommendationsPanel({ profile }: { profile: ProfileData | null 
   return (
     <View style={[styles.panel, shadows.elevated]}>
       <ModeSwitch mode={mode} onChange={setMode} />
-      <Text style={styles.sectionLabel}>Топ-5 рекомендаций</Text>
+      <Text style={styles.sectionLabel}>
+        {mode === 'profile' ? 'Топ-5 · CatBoost на устройстве' : 'Топ-5 · популярные (не модель)'}
+      </Text>
+
+      {mode === 'profile' && loading && (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color={colors.primary.DEFAULT} />
+          <Text style={styles.loadingText}>Считаем рекомендации модели…</Text>
+        </View>
+      )}
+
+      {mode === 'profile' && modelError && !loading && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorTitle}>Модель недоступна</Text>
+          <Text style={styles.errorText}>{modelError}</Text>
+        </View>
+      )}
 
       {products[0] && (
         <View style={styles.heroWrap}>
@@ -238,6 +272,35 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.text.muted,
     marginBottom: 16,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: colors.text.secondary,
+  },
+  errorBox: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#fdecea',
+    borderWidth: 1,
+    borderColor: '#f5c6c2',
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#c0392b',
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#922b21',
   },
   heroWrap: { marginBottom: 12 },
   heroCard: {

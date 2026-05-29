@@ -9,6 +9,7 @@ export interface UserFeatures {
   monthlyIncome: number
   accountType: number
   currency: number
+  ownedProducts: string[]
   clicks: Record<string, number>
   seniorityMonths?: number
   isNewCustomer?: number
@@ -56,8 +57,9 @@ export function buildPointwiseRows(
     segment,
   }
 
+  const owned = new Set(f.ownedProducts ?? [])
   for (const p of meta.products) {
-    values[`own_${p}`] = (f.clicks[p] ?? 0) > 0 ? 1 : 0
+    values[`own_${p}`] = owned.has(p) ? 1 : 0
   }
 
   return meta.products.map((product) => {

@@ -28,7 +28,7 @@ export function InferenceBenchmarkBanner({ status, results, error }: Props) {
     <View style={styles.wrap}>
       <Text style={styles.title}>Скорость inference (Android)</Text>
       <Text style={styles.hint}>
-        Время отклика модели, не «Портрет клиента» ниже. Замер один раз при запуске.
+        Время отклика модели.
       </Text>
 
       {status === 'running' && (
@@ -48,9 +48,6 @@ export function InferenceBenchmarkBanner({ status, results, error }: Props) {
             Профиль замера: <Text style={styles.profileName}>{results.profileName}</Text>
           </Text>
           <Text style={styles.profileSummary}>{results.profileSummary}</Text>
-          <Text style={styles.backend}>
-            Backend: <Text style={styles.backendValue}>{results.backend}</Text>
-          </Text>
 
           <Text style={styles.group}>Инициализация модели</Text>
           <StatLine label="init" value={formatMs(results.initMs)} />

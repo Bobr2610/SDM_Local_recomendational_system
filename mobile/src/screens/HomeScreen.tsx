@@ -85,7 +85,7 @@ export function HomeScreen() {
           <Text style={styles.sectionLabel}>Демо рекомендаций</Text>
           <Text style={styles.pageTitle}>Подберите продукты для клиента</Text>
           <Text style={styles.pageSub}>
-            Выберите профиль клиента и сравните персональные рекомендации с популярными продуктами.
+            Выберите профиль клиента — рекомендации строятся моделью CatBoost на устройстве.
           </Text>
         </View>
 
